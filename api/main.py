@@ -9,6 +9,8 @@ blocked on the sentiment half existing.
 
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,13 +28,24 @@ app = FastAPI(
 
 # Track 3 shipped Vite, not Next.js — 5173 is the dev server, 4173 is
 # `vite preview`. 3000 stays allowed so a Next.js port change needs no redeploy.
+LOCAL_ORIGINS = [
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:4173", "http://127.0.0.1:4173",
+    "http://localhost:3000", "http://127.0.0.1:3000",
+]
+
+# Every Vercel deployment gets its own generated hostname, and preview builds get
+# a new one per commit — listing them by hand would break on the next deploy.
+# The regex covers the project's deployments; CORS_ORIGINS adds a custom domain
+# when there is one.
+VERCEL_ORIGIN_RE = r"https://.*\.vercel\.app"
+
+extra = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:4173", "http://127.0.0.1:4173",
-        "http://localhost:3000", "http://127.0.0.1:3000",
-    ],
+    allow_origins=LOCAL_ORIGINS + extra,
+    allow_origin_regex=VERCEL_ORIGIN_RE,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

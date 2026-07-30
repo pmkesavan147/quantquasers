@@ -6,7 +6,20 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb",
-        "includeFiles": "{data/snapshot/**,fixtures/**,trading/*.yaml,trading/*.txt,data/*.csv,data/*.json}"
+        "includeFiles": [
+          "data/snapshot/**",
+          "data/*.csv",
+          "data/*.json",
+          "fixtures/**",
+          "trading/desks.yaml",
+          "trading/allowlist.txt",
+          "core/**",
+          "gemma/**",
+          "ingest/**",
+          "selection/**",
+          "trading/**",
+          "api/**"
+        ]
       }
     }
   ],

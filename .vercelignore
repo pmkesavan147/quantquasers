@@ -1,0 +1,15 @@
+# The backend deployment is the Python app only. The UI is a separate Vercel
+# project rooted at sentiment-portfolio/.
+sentiment-portfolio/
+
+tests/
+scripts/
+data/cache/
+*.sqlite3
+.pytest_cache/
+__pycache__/
+.venv/
+venv/
+
+# Docs are for humans reading the repo, not for the function bundle.
+*.md

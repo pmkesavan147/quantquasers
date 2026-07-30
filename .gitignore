@@ -20,3 +20,5 @@ web/out/
 sentiment-portfolio/dist/
 sentiment-portfolio/tsconfig.tsbuildinfo
 .pytest_cache/
+
+.vercel
