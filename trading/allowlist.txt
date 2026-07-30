@@ -1,0 +1,34 @@
+# The bot trades ONLY these symbols. Anything else is vetoed by the risk
+# manager with rule_fired="allowlist", regardless of how good the signal is.
+# NSE trading symbols, no exchange prefix, no .NS suffix.
+
+RELIANCE
+TCS
+INFY
+HDFCBANK
+ICICIBANK
+SBIN
+ITC
+LT
+AXISBANK
+KOTAKBANK
+TATAMOTORS
+TATASTEEL
+SUNPHARMA
+MARUTI
+BHARTIARTL
+ASIANPAINT
+BAJFINANCE
+HINDUNILVR
+WIPRO
+TECHM
+POWERGRID
+NTPC
+ONGC
+COALINDIA
+JSWSTEEL
+ADANIPORTS
+TITAN
+NESTLEIND
+GRASIM
+CIPLA

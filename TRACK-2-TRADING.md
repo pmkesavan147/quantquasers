@@ -7,6 +7,43 @@ risk manager to a broker that is paper today and Kite-capable tomorrow.
 
 > **STATUS AT DEMO: PAPER. The live gate ships locked and is never armed.**
 
+## Implementation status — BUILT
+
+The track is implemented and green: **106 tests passing.**
+
+```bash
+pip install -r requirements.txt
+pytest -q                                              # 106 passed
+python -m trading.engine.core --all --at 10:30         # all three desks
+python -m trading.engine.core --desk day  --at 15:20   # square-off round trip
+uvicorn api.main:app --reload                          # API on :8000
+```
+
+Verified end to end: entries at 10:30 across all three desks, the four
+sentiment refusals firing with their numbers, square-off closing the intraday
+book at 15:20, and the book surviving a process restart by replaying the
+journal.
+
+### What Track 1 owes this track
+
+1. **`QuantMetrics.move_1d_pct` / `move_5d_pct` / `move_20d_pct`** — added to
+   `core/contracts.py` as **optional** fields for the lag guard. The guard
+   degrades to a no-op while they're `None`, so nothing breaks, but the
+   `sentiment_already_priced` skip stays dormant until they're populated.
+   Day desk reads 1d, swing reads 5d, long-term reads 20d.
+2. Nothing else. `SymbolSentiment.as_of` and `drivers[].event_type` already
+   carry everything the exit logic needs.
+
+### Deviations from the spec below, and why
+
+| Change | Reason |
+|---|---|
+| `STRETCH` enters at **half** conviction rather than being dropped | A warn is not a refusal — that's what `OUTSIDE_MANDATE` is for. Dropping STRETCH threw away most of the mandate engine's nuance. |
+| Exit precedence reordered (see §3.5) | `square_off` and `blocked_event` must outrank a profit target. The original ordering was illustrative, not safety-ordered. |
+| Sizing floors at one share when the full slot can afford it | Conviction scaling silently excluded every share priced above `slot_value/2`, skewing the book toward cheap stocks. |
+| `Fill.realised` added | Lets daily P&L be summed straight from the ledger instead of re-deriving average prices. |
+| Costs rounded **before** being applied to the book | The book is rebuilt from the journal, so unrounded arithmetic drifted a paisa from its own replay. |
+
 ---
 
 ## 0. Shared contract (identical in all three track docs)
@@ -201,6 +238,10 @@ a high score does **not** imply positive sentiment. Ranking on it alone will buy
 stocks with bad news. Sentiment gets its own gate, its own sizing, and its own
 exit.
 
+The mandate verdict outranks every signal, with one nuance: `OUTSIDE_MANDATE`
+is a hard block, but `STRETCH` **enters at half conviction**. A warn should
+shrink a position, not forbid it.
+
 ### Entry gate — all conditions, per desk
 
 ```yaml
@@ -261,12 +302,17 @@ sizing is a desk *preference*, the cap is a *limit*.
 
 ### Exit — four triggers, first to fire wins
 
-| # | Trigger | Condition |
-|---|---|---|
-| 1 | `sentiment_reversal` | score falls below `exit_sentiment` (day `0.0`, swing `-0.10`, long `-0.20`) |
-| 2 | `blocked_event` | a `BLOCKED_EVENTS` headline appears for a held symbol |
-| 3 | `stop_loss` / `target` | desk price params |
-| 4 | `time_exit` | `square_off` (day) · `max_hold_days` (swing) · `rebalance` (long) |
+| # | Trigger | Condition | Why here |
+|---|---|---|---|
+| 1 | `square_off` | day desk, past 15:15 | mechanical — the broker forces it anyway |
+| 2 | `blocked_event` | a `BLOCKED_EVENTS` headline on a held symbol | material adverse news, get out |
+| 3 | `stop_loss` | `pnl <= -stop_loss_pct` | capital protection must not be outranked |
+| 4 | `sentiment_reversal` | score below `exit_sentiment` (day `0.0`, swing `-0.10`, long `-0.20`) | the thesis is gone |
+| 5 | `target` | `pnl >= target_pct` | profit taking |
+| 6 | `max_hold` / `rebalance` | time in position | housekeeping |
+
+`min_hold_days` suppresses only the discretionary exits — reversal and target.
+It never suppresses a stop, a blocked event, or a square-off.
 
 Write the trigger name into the `ProposedOrder.reason` and the journal. The
 distribution of exit reasons across a session is the most interesting artefact

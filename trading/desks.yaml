@@ -1,0 +1,81 @@
+# The trading floor — three desks, one per horizon, each fed by Track 1's
+# ranker for that horizon. All desks report to the SAME risk manager and
+# write to the SAME append-only journal.
+#
+#   bot desk day          run one desk
+#   bot run               run every enabled desk
+#   bot desks             per-desk books + firm summary
+#
+# allocation_pct must sum to 100. Each desk gets
+# MAX_CAPITAL * allocation_pct / 100 and cannot exceed it — enforced in the
+# risk manager, not here.
+#
+# Entry/exit thresholds get STRICTER as the horizon shortens: less time for
+# a weak signal to be right.
+
+desks:
+  day:
+    horizon: day
+    allocation_pct: 20
+    enabled: true
+    product: MIS                    # intraday margin
+    max_positions: 3
+    entry:
+      min_sentiment: 0.30
+      min_confidence: 0.60
+      min_articles: 3
+      max_sentiment_age_hours: 6
+      max_prior_move_pct: 3.0       # lag guard, measured on move_1d_pct
+      prior_move_field: move_1d_pct
+    exit_sentiment: 0.0
+    stop_loss_pct: 1.0
+    target_pct: 2.0
+    entry_window: ["09:30", "14:30"]
+    square_off: "15:15"             # hard exit, no overnight carry
+    min_hold_days: null
+    max_hold_days: null
+    rebalance_every_days: null
+
+  swing:
+    horizon: swing
+    allocation_pct: 30
+    enabled: true
+    product: CNC
+    max_positions: 5
+    entry:
+      min_sentiment: 0.20
+      min_confidence: 0.50
+      min_articles: 4
+      max_sentiment_age_hours: 48
+      max_prior_move_pct: 8.0
+      prior_move_field: move_5d_pct
+    exit_sentiment: -0.10
+    stop_loss_pct: 5.0
+    target_pct: 12.0
+    entry_window: null
+    square_off: null
+    min_hold_days: 2
+    max_hold_days: 15
+    rebalance_every_days: null
+
+  long_term:
+    horizon: long_term
+    allocation_pct: 50
+    enabled: true
+    product: CNC
+    max_positions: 10
+    entry:
+      min_sentiment: 0.10
+      min_confidence: 0.40
+      min_articles: 5
+      max_sentiment_age_hours: 168
+      max_prior_move_pct: 15.0
+      prior_move_field: move_20d_pct
+    exit_sentiment: -0.20
+    stop_loss_pct: null             # no price stop; thesis-driven exit only
+    target_pct: null
+    entry_window: null
+    square_off: null
+    min_hold_days: 10
+    max_hold_days: null
+    rebalance_every_days: 21

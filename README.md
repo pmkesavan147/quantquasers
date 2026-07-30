@@ -18,13 +18,32 @@ comes from deterministic Python. `trading/` provably never imports `gemma/`.
 
 ## Three tracks, one dev each
 
-| Track | Doc | Owns |
-|---|---|---|
-| 1 · Sentiment & Selection | [TRACK-1-SENTIMENT.md](TRACK-1-SENTIMENT.md) | Gemma scoring, quant metrics, mandate guard, ranker |
-| 2 · Trade Automation | [TRACK-2-TRADING.md](TRACK-2-TRADING.md) | Desks, risk manager, paper + Kite execution, journal |
-| 3 · Frontend & UX | [TRACK-3-FRONTEND.md](TRACK-3-FRONTEND.md) | Next.js app, onboarding, dashboard, audit trail |
+| Track | Doc | Owns | Status |
+|---|---|---|---|
+| 1 · Sentiment & Selection | [TRACK-1-SENTIMENT.md](TRACK-1-SENTIMENT.md) | Gemma scoring, quant metrics, mandate guard, ranker | spec |
+| 2 · Trade Automation | [TRACK-2-TRADING.md](TRACK-2-TRADING.md) | Desks, risk manager, paper + Kite execution, journal | **built · 106 tests** |
+| 3 · Frontend & UX | [TRACK-3-FRONTEND.md](TRACK-3-FRONTEND.md) | Next.js app, onboarding, dashboard, audit trail | spec |
 
 Each doc repeats the shared contract in §0 so any dev can work standalone.
+
+## Running what exists
+
+```bash
+pip install -r requirements.txt
+pytest -q                                              # 106 passed
+python -m trading.engine.core --all --at 10:30         # all three desks trade
+python -m trading.engine.core --desk day  --at 15:20   # intraday square-off
+uvicorn api.main:app --reload                          # API + /docs on :8000
+```
+
+`core/contracts.py` and `fixtures/` are in place, so **Tracks 1 and 3 are
+unblocked now.** Track 3 can build every screen against
+`POST /api/orders/execute` today — it returns real fills, real vetoes, and the
+sentiment refusals with their triggering numbers.
+
+Track 1: `QuantMetrics.move_1d_pct` / `move_5d_pct` / `move_20d_pct` are
+optional fields the lag guard reads. Populate them when convenient; the guard
+is a no-op until you do.
 
 ## Critical path
 

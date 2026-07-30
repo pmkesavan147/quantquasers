@@ -1,0 +1,158 @@
+[
+  {
+    "symbol": "TCS",
+    "horizon": "swing",
+    "composite_score": 76.0,
+    "explanation": "Deal-win coverage across multiple outlets with price above all three moving averages.",
+    "sentiment": {
+      "symbol": "TCS",
+      "as_of": "2026-07-30T09:30:00",
+      "score": 0.51,
+      "confidence": 0.74,
+      "n_articles": 11,
+      "top_events": ["order_win", "analyst_view"],
+      "drivers": [
+        {
+          "id": "tcs-1",
+          "symbol": "TCS",
+          "title": "TCS signs multi-year deal with European retailer, TCV above $1bn",
+          "source": "Economic Times",
+          "url": "https://example.com/tcs-1",
+          "published_at": "2026-07-30T08:40:00",
+          "sentiment": 0.69,
+          "label": "positive",
+          "event_type": "order_win",
+          "materiality": 5,
+          "rationale": "Large total contract value adds multi-year revenue visibility.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "TCS", "name": "Tata Consultancy Services", "cap_bucket": "large",
+      "mcap_cr": 1240000.0, "ltp": 3428.0, "annual_vol": 19.4, "beta": 0.82,
+      "max_drawdown_1y": 15.6, "adtv_cr": 720.0, "atr_pct": 1.5, "rsi14": 59.2,
+      "sma20": 3360.0, "sma50": 3288.0, "sma200": 3180.0,
+      "dist_52w_high_pct": -3.4, "asm_gsm_flag": false,
+      "move_1d_pct": 1.1, "move_5d_pct": 2.6, "move_20d_pct": 5.4
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "HDFCBANK",
+    "horizon": "swing",
+    "composite_score": 72.0,
+    "explanation": "Steady positive coverage on deposit growth, low volatility relative to the sector.",
+    "sentiment": {
+      "symbol": "HDFCBANK",
+      "as_of": "2026-07-30T09:20:00",
+      "score": 0.38,
+      "confidence": 0.69,
+      "n_articles": 9,
+      "top_events": ["earnings"],
+      "drivers": [
+        {
+          "id": "hdfc-1",
+          "symbol": "HDFCBANK",
+          "title": "HDFC Bank deposit growth outpaces credit growth for third quarter",
+          "source": "Mint",
+          "url": "https://example.com/hdfc-1",
+          "published_at": "2026-07-30T07:55:00",
+          "sentiment": 0.52,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 4,
+          "rationale": "Deposit-led growth eases the funding cost concern.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "HDFCBANK", "name": "HDFC Bank", "cap_bucket": "large",
+      "mcap_cr": 1420000.0, "ltp": 1862.0, "annual_vol": 17.2, "beta": 0.91,
+      "max_drawdown_1y": 12.4, "adtv_cr": 980.0, "atr_pct": 1.2, "rsi14": 55.6,
+      "sma20": 1834.0, "sma50": 1798.0, "sma200": 1710.0,
+      "dist_52w_high_pct": -2.8, "asm_gsm_flag": false,
+      "move_1d_pct": 0.6, "move_5d_pct": 1.9, "move_20d_pct": 4.1
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "INFY",
+    "horizon": "swing",
+    "composite_score": 70.0,
+    "explanation": "Positive, but the most recent coverage is three days old — the signal has gone quiet.",
+    "sentiment": {
+      "symbol": "INFY",
+      "as_of": "2026-07-27T09:30:00",
+      "score": 0.44,
+      "confidence": 0.63,
+      "n_articles": 6,
+      "top_events": ["analyst_view"],
+      "drivers": [
+        {
+          "id": "infy-1",
+          "symbol": "INFY",
+          "title": "Infosys guidance seen conservative, brokerages retain buy",
+          "source": "Moneycontrol",
+          "url": "https://example.com/infy-1",
+          "published_at": "2026-07-27T08:30:00",
+          "sentiment": 0.44,
+          "label": "positive",
+          "event_type": "analyst_view",
+          "materiality": 3,
+          "rationale": "Sell-side reiteration without new company disclosure.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "INFY", "name": "Infosys", "cap_bucket": "large",
+      "mcap_cr": 640000.0, "ltp": 1548.0, "annual_vol": 22.1, "beta": 0.88,
+      "max_drawdown_1y": 19.8, "adtv_cr": 540.0, "atr_pct": 1.7, "rsi14": 52.4,
+      "sma20": 1532.0, "sma50": 1510.0, "sma200": 1478.0,
+      "dist_52w_high_pct": -8.1, "asm_gsm_flag": false,
+      "move_1d_pct": 0.3, "move_5d_pct": 1.2, "move_20d_pct": 2.8
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "WIPRO",
+    "horizon": "swing",
+    "composite_score": 64.0,
+    "explanation": "Headlines disagree sharply with each other, so confidence is too low to act on.",
+    "sentiment": {
+      "symbol": "WIPRO",
+      "as_of": "2026-07-30T09:15:00",
+      "score": 0.29,
+      "confidence": 0.34,
+      "n_articles": 5,
+      "top_events": ["management_change", "analyst_view"],
+      "drivers": [
+        {
+          "id": "wip-1",
+          "symbol": "WIPRO",
+          "title": "Wipro names new head of Americas business",
+          "source": "Business Standard",
+          "url": "https://example.com/wip-1",
+          "published_at": "2026-07-30T08:20:00",
+          "sentiment": 0.21,
+          "label": "neutral",
+          "event_type": "management_change",
+          "materiality": 2,
+          "rationale": "Leadership change with no stated strategy shift.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "WIPRO", "name": "Wipro", "cap_bucket": "large",
+      "mcap_cr": 268000.0, "ltp": 512.4, "annual_vol": 24.8, "beta": 0.96,
+      "max_drawdown_1y": 22.4, "adtv_cr": 210.0, "atr_pct": 1.9, "rsi14": 49.8,
+      "sma20": 508.0, "sma50": 502.0, "sma200": 494.0,
+      "dist_52w_high_pct": -11.6, "asm_gsm_flag": false,
+      "move_1d_pct": 0.2, "move_5d_pct": 0.9, "move_20d_pct": 2.1
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  }
+]

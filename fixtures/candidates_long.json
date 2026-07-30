@@ -1,0 +1,158 @@
+[
+  {
+    "symbol": "LT",
+    "horizon": "long_term",
+    "composite_score": 82.0,
+    "explanation": "Order book at a record with price above the 200-day average and a shallow one-year drawdown.",
+    "sentiment": {
+      "symbol": "LT",
+      "as_of": "2026-07-30T09:00:00",
+      "score": 0.46,
+      "confidence": 0.71,
+      "n_articles": 13,
+      "top_events": ["order_win", "earnings"],
+      "drivers": [
+        {
+          "id": "lt-1",
+          "symbol": "LT",
+          "title": "L&T order inflow hits record on infrastructure and hydrocarbon wins",
+          "source": "Economic Times",
+          "url": "https://example.com/lt-1",
+          "published_at": "2026-07-30T07:40:00",
+          "sentiment": 0.71,
+          "label": "positive",
+          "event_type": "order_win",
+          "materiality": 5,
+          "rationale": "Record inflow extends revenue visibility across segments.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "LT", "name": "Larsen & Toubro", "cap_bucket": "large",
+      "mcap_cr": 512000.0, "ltp": 3724.0, "annual_vol": 23.6, "beta": 1.12,
+      "max_drawdown_1y": 16.8, "adtv_cr": 468.0, "atr_pct": 1.8, "rsi14": 62.1,
+      "sma20": 3640.0, "sma50": 3548.0, "sma200": 3320.0,
+      "dist_52w_high_pct": -2.4, "asm_gsm_flag": false,
+      "move_1d_pct": 1.2, "move_5d_pct": 3.4, "move_20d_pct": 8.2
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "SUNPHARMA",
+    "horizon": "long_term",
+    "composite_score": 74.0,
+    "explanation": "Specialty portfolio traction with steady coverage and low beta.",
+    "sentiment": {
+      "symbol": "SUNPHARMA",
+      "as_of": "2026-07-30T08:50:00",
+      "score": 0.33,
+      "confidence": 0.62,
+      "n_articles": 8,
+      "top_events": ["earnings", "regulatory"],
+      "drivers": [
+        {
+          "id": "sun-1",
+          "symbol": "SUNPHARMA",
+          "title": "Sun Pharma specialty revenue crosses $1bn annualised run rate",
+          "source": "Mint",
+          "url": "https://example.com/sun-1",
+          "published_at": "2026-07-30T07:20:00",
+          "sentiment": 0.58,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 4,
+          "rationale": "Specialty mix shift improves durable margin profile.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "SUNPHARMA", "name": "Sun Pharmaceutical", "cap_bucket": "large",
+      "mcap_cr": 428000.0, "ltp": 1786.0, "annual_vol": 20.4, "beta": 0.68,
+      "max_drawdown_1y": 13.2, "adtv_cr": 312.0, "atr_pct": 1.4, "rsi14": 56.8,
+      "sma20": 1754.0, "sma50": 1720.0, "sma200": 1642.0,
+      "dist_52w_high_pct": -4.1, "asm_gsm_flag": false,
+      "move_1d_pct": 0.5, "move_5d_pct": 1.6, "move_20d_pct": 3.8
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "ICICIBANK",
+    "horizon": "long_term",
+    "composite_score": 79.0,
+    "explanation": "Asset quality commentary consistently positive across a large article count.",
+    "sentiment": {
+      "symbol": "ICICIBANK",
+      "as_of": "2026-07-30T08:40:00",
+      "score": 0.42,
+      "confidence": 0.76,
+      "n_articles": 14,
+      "top_events": ["earnings"],
+      "drivers": [
+        {
+          "id": "icici-1",
+          "symbol": "ICICIBANK",
+          "title": "ICICI Bank slippages at multi-year low, provisions written back",
+          "source": "Business Standard",
+          "url": "https://example.com/icici-1",
+          "published_at": "2026-07-30T07:10:00",
+          "sentiment": 0.64,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 5,
+          "rationale": "Lower slippages with write-backs lifts near-term earnings quality.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "ICICIBANK", "name": "ICICI Bank", "cap_bucket": "large",
+      "mcap_cr": 890000.0, "ltp": 1268.0, "annual_vol": 18.6, "beta": 0.98,
+      "max_drawdown_1y": 11.4, "adtv_cr": 810.0, "atr_pct": 1.3, "rsi14": 60.4,
+      "sma20": 1242.0, "sma50": 1214.0, "sma200": 1148.0,
+      "dist_52w_high_pct": -1.8, "asm_gsm_flag": false,
+      "move_1d_pct": 0.8, "move_5d_pct": 2.2, "move_20d_pct": 5.1
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "COALINDIA",
+    "horizon": "long_term",
+    "composite_score": 61.0,
+    "explanation": "Coverage is thin — four articles is below the threshold for a long-term position.",
+    "sentiment": {
+      "symbol": "COALINDIA",
+      "as_of": "2026-07-30T08:30:00",
+      "score": 0.36,
+      "confidence": 0.58,
+      "n_articles": 4,
+      "top_events": ["macro"],
+      "drivers": [
+        {
+          "id": "coal-1",
+          "symbol": "COALINDIA",
+          "title": "Coal India production target raised on power demand outlook",
+          "source": "Moneycontrol",
+          "url": "https://example.com/coal-1",
+          "published_at": "2026-07-30T07:00:00",
+          "sentiment": 0.41,
+          "label": "positive",
+          "event_type": "macro",
+          "materiality": 3,
+          "rationale": "Volume target tied to demand forecast rather than committed offtake.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "COALINDIA", "name": "Coal India", "cap_bucket": "large",
+      "mcap_cr": 246000.0, "ltp": 398.6, "annual_vol": 26.2, "beta": 1.04,
+      "max_drawdown_1y": 21.8, "adtv_cr": 264.0, "atr_pct": 1.9, "rsi14": 54.2,
+      "sma20": 392.0, "sma50": 386.0, "sma200": 374.0,
+      "dist_52w_high_pct": -12.4, "asm_gsm_flag": false,
+      "move_1d_pct": 0.4, "move_5d_pct": 1.4, "move_20d_pct": 3.2
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  }
+]

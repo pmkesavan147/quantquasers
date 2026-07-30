@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env
+*.sqlite3
+*.sqlite3.bak
+
+# The live gate's second lock. Committing this would defeat the point.
+live.lock
+kite_token.json
+
+data/cache/
+node_modules/
+web/.next/
+web/out/
+.DS_Store

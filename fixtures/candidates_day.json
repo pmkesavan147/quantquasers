@@ -1,0 +1,382 @@
+[
+  {
+    "symbol": "TATAMOTORS",
+    "horizon": "day",
+    "composite_score": 78.0,
+    "explanation": "Broad positive coverage on a JLR volume beat, with enough traded value to enter and exit intraday without moving the price.",
+    "sentiment": {
+      "symbol": "TATAMOTORS",
+      "as_of": "2026-07-30T10:00:00",
+      "score": 0.62,
+      "confidence": 0.72,
+      "n_articles": 12,
+      "top_events": ["earnings", "analyst_view"],
+      "drivers": [
+        {
+          "id": "tm-1",
+          "symbol": "TATAMOTORS",
+          "title": "Tata Motors Q1 JLR volumes beat estimates, margin guidance raised",
+          "source": "Moneycontrol",
+          "url": "https://example.com/tm-1",
+          "published_at": "2026-07-30T09:20:00",
+          "sentiment": 0.78,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 5,
+          "rationale": "Volume beat with raised guidance is a direct earnings upgrade.",
+          "model": "gemma3:4b"
+        },
+        {
+          "id": "tm-2",
+          "symbol": "TATAMOTORS",
+          "title": "Brokerages raise Tata Motors estimates after Q1 print",
+          "source": "Economic Times",
+          "url": "https://example.com/tm-2",
+          "published_at": "2026-07-30T08:45:00",
+          "sentiment": 0.45,
+          "label": "positive",
+          "event_type": "analyst_view",
+          "materiality": 3,
+          "rationale": "Sell-side upgrades follow the result rather than lead it.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "TATAMOTORS",
+      "name": "Tata Motors",
+      "cap_bucket": "large",
+      "mcap_cr": 384000.0,
+      "ltp": 1042.3,
+      "annual_vol": 28.4,
+      "beta": 1.18,
+      "max_drawdown_1y": 18.2,
+      "adtv_cr": 412.0,
+      "atr_pct": 2.1,
+      "rsi14": 61.4,
+      "sma20": 1018.0,
+      "sma50": 985.0,
+      "sma200": 921.0,
+      "dist_52w_high_pct": -4.6,
+      "asm_gsm_flag": false,
+      "move_1d_pct": 1.4,
+      "move_5d_pct": 3.1,
+      "move_20d_pct": 6.8
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "RELIANCE",
+    "horizon": "day",
+    "composite_score": 81.0,
+    "explanation": "Ranks highest on liquidity and trend, but the news flow is negative. Momentum and sentiment disagree.",
+    "sentiment": {
+      "symbol": "RELIANCE",
+      "as_of": "2026-07-30T09:55:00",
+      "score": -0.35,
+      "confidence": 0.81,
+      "n_articles": 15,
+      "top_events": ["regulatory", "analyst_view"],
+      "drivers": [
+        {
+          "id": "ril-1",
+          "symbol": "RELIANCE",
+          "title": "Reliance retail arm faces fresh scrutiny over vendor contracts",
+          "source": "Business Standard",
+          "url": "https://example.com/ril-1",
+          "published_at": "2026-07-30T09:10:00",
+          "sentiment": -0.55,
+          "label": "negative",
+          "event_type": "analyst_view",
+          "materiality": 3,
+          "rationale": "Scrutiny raises overhang without a quantified financial impact.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "RELIANCE",
+      "name": "Reliance Industries",
+      "cap_bucket": "large",
+      "mcap_cr": 1980000.0,
+      "ltp": 1486.5,
+      "annual_vol": 21.2,
+      "beta": 0.94,
+      "max_drawdown_1y": 14.1,
+      "adtv_cr": 1840.0,
+      "atr_pct": 1.6,
+      "rsi14": 58.0,
+      "sma20": 1462.0,
+      "sma50": 1440.0,
+      "sma200": 1388.0,
+      "dist_52w_high_pct": -2.1,
+      "asm_gsm_flag": false,
+      "move_1d_pct": 0.4,
+      "move_5d_pct": 1.8,
+      "move_20d_pct": 4.2
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "ADANIPORTS",
+    "horizon": "day",
+    "composite_score": 74.0,
+    "explanation": "Aggregate sentiment is positive, but the coverage sits on top of a promoter pledge disclosure.",
+    "sentiment": {
+      "symbol": "ADANIPORTS",
+      "as_of": "2026-07-30T09:50:00",
+      "score": 0.41,
+      "confidence": 0.66,
+      "n_articles": 9,
+      "top_events": ["order_win", "promoter_pledge"],
+      "drivers": [
+        {
+          "id": "adp-1",
+          "symbol": "ADANIPORTS",
+          "title": "Adani Ports wins 30-year concession for new terminal",
+          "source": "Mint",
+          "url": "https://example.com/adp-1",
+          "published_at": "2026-07-30T09:05:00",
+          "sentiment": 0.72,
+          "label": "positive",
+          "event_type": "order_win",
+          "materiality": 4,
+          "rationale": "Long-dated concession adds visible future revenue.",
+          "model": "gemma3:4b"
+        },
+        {
+          "id": "adp-2",
+          "symbol": "ADANIPORTS",
+          "title": "Promoter pledge on Adani Ports shares rises to 18%",
+          "source": "Moneycontrol",
+          "url": "https://example.com/adp-2",
+          "published_at": "2026-07-30T08:30:00",
+          "sentiment": -0.48,
+          "label": "negative",
+          "event_type": "promoter_pledge",
+          "materiality": 4,
+          "rationale": "Rising pledge raises balance-sheet and forced-sale risk.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "ADANIPORTS",
+      "name": "Adani Ports and SEZ",
+      "cap_bucket": "large",
+      "mcap_cr": 302000.0,
+      "ltp": 1398.0,
+      "annual_vol": 34.6,
+      "beta": 1.32,
+      "max_drawdown_1y": 26.4,
+      "adtv_cr": 288.0,
+      "atr_pct": 2.4,
+      "rsi14": 64.2,
+      "sma20": 1355.0,
+      "sma50": 1310.0,
+      "sma200": 1244.0,
+      "dist_52w_high_pct": -6.8,
+      "asm_gsm_flag": false,
+      "move_1d_pct": 1.9,
+      "move_5d_pct": 4.4,
+      "move_20d_pct": 9.1
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "ITC",
+    "horizon": "day",
+    "composite_score": 69.0,
+    "explanation": "Positive and well-covered, but the move has already happened today.",
+    "sentiment": {
+      "symbol": "ITC",
+      "as_of": "2026-07-30T09:45:00",
+      "score": 0.54,
+      "confidence": 0.70,
+      "n_articles": 8,
+      "top_events": ["earnings"],
+      "drivers": [
+        {
+          "id": "itc-1",
+          "symbol": "ITC",
+          "title": "ITC cigarette volumes surprise on the upside, FMCG margin expands",
+          "source": "Economic Times",
+          "url": "https://example.com/itc-1",
+          "published_at": "2026-07-30T08:15:00",
+          "sentiment": 0.66,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 4,
+          "rationale": "Volume and margin both improving is a clean beat.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "ITC",
+      "name": "ITC",
+      "cap_bucket": "large",
+      "mcap_cr": 545000.0,
+      "ltp": 438.2,
+      "annual_vol": 18.9,
+      "beta": 0.71,
+      "max_drawdown_1y": 11.8,
+      "adtv_cr": 640.0,
+      "atr_pct": 1.4,
+      "rsi14": 72.8,
+      "sma20": 421.0,
+      "sma50": 412.0,
+      "sma200": 398.0,
+      "dist_52w_high_pct": -0.8,
+      "asm_gsm_flag": false,
+      "move_1d_pct": 5.2,
+      "move_5d_pct": 7.9,
+      "move_20d_pct": 11.4
+    },
+    "verdict": { "level": "SUITABLE", "reasons": [] }
+  },
+  {
+    "symbol": "TITAN",
+    "horizon": "day",
+    "composite_score": 66.0,
+    "explanation": "Positive news flow, but one-year drawdown exceeds the tolerance stated in the mandate.",
+    "sentiment": {
+      "symbol": "TITAN",
+      "as_of": "2026-07-30T09:40:00",
+      "score": 0.48,
+      "confidence": 0.64,
+      "n_articles": 7,
+      "top_events": ["earnings"],
+      "drivers": [
+        {
+          "id": "tt-1",
+          "symbol": "TITAN",
+          "title": "Titan jewellery segment posts 19% revenue growth",
+          "source": "Mint",
+          "url": "https://example.com/tt-1",
+          "published_at": "2026-07-30T08:50:00",
+          "sentiment": 0.58,
+          "label": "positive",
+          "event_type": "earnings",
+          "materiality": 4,
+          "rationale": "Core segment growth ahead of category trend.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "TITAN",
+      "name": "Titan Company",
+      "cap_bucket": "large",
+      "mcap_cr": 298000.0,
+      "ltp": 3312.0,
+      "annual_vol": 31.2,
+      "beta": 1.09,
+      "max_drawdown_1y": 32.6,
+      "adtv_cr": 196.0,
+      "atr_pct": 2.0,
+      "rsi14": 57.1,
+      "sma20": 3240.0,
+      "sma50": 3180.0,
+      "sma200": 3402.0,
+      "dist_52w_high_pct": -14.2,
+      "asm_gsm_flag": false,
+      "move_1d_pct": 0.9,
+      "move_5d_pct": 2.2,
+      "move_20d_pct": -1.8
+    },
+    "verdict": {
+      "level": "STRETCH",
+      "reasons": [
+        {
+          "code": "R5",
+          "severity": "warn",
+          "text": "One-year drawdown is deeper than your stated tolerance",
+          "metric": "max_drawdown_1y",
+          "value": 32.6,
+          "threshold": 25.0
+        }
+      ]
+    }
+  },
+  {
+    "symbol": "SOMEMICRO",
+    "horizon": "day",
+    "composite_score": 71.0,
+    "explanation": "Strong sentiment on a thinly traded micro cap. Cannot be exited intraday without moving the price.",
+    "sentiment": {
+      "symbol": "SOMEMICRO",
+      "as_of": "2026-07-30T09:35:00",
+      "score": 0.74,
+      "confidence": 0.68,
+      "n_articles": 6,
+      "top_events": ["order_win"],
+      "drivers": [
+        {
+          "id": "sm-1",
+          "symbol": "SOMEMICRO",
+          "title": "SomeMicro Industries bags ₹120 crore export order",
+          "source": "Business Standard",
+          "url": "https://example.com/sm-1",
+          "published_at": "2026-07-30T09:00:00",
+          "sentiment": 0.81,
+          "label": "positive",
+          "event_type": "order_win",
+          "materiality": 5,
+          "rationale": "Order is large relative to the company's revenue base.",
+          "model": "gemma3:4b"
+        }
+      ]
+    },
+    "quant": {
+      "symbol": "SOMEMICRO",
+      "name": "SomeMicro Industries",
+      "cap_bucket": "micro",
+      "mcap_cr": 340.0,
+      "ltp": 88.4,
+      "annual_vol": 61.8,
+      "beta": 1.44,
+      "max_drawdown_1y": 48.2,
+      "adtv_cr": 1.8,
+      "atr_pct": 4.6,
+      "rsi14": 68.0,
+      "sma20": 82.0,
+      "sma50": 76.0,
+      "sma200": 69.0,
+      "dist_52w_high_pct": -9.4,
+      "asm_gsm_flag": true,
+      "move_1d_pct": 2.8,
+      "move_5d_pct": 12.1,
+      "move_20d_pct": 24.6
+    },
+    "verdict": {
+      "level": "OUTSIDE_MANDATE",
+      "reasons": [
+        {
+          "code": "R2",
+          "severity": "block",
+          "text": "Liquidity too thin for intraday — exiting would move the price",
+          "metric": "adtv_cr",
+          "value": 1.8,
+          "threshold": 5.0
+        },
+        {
+          "code": "R3",
+          "severity": "block",
+          "text": "Day trading is blocked on micro caps, and your mandate enables day trading",
+          "metric": "mcap_cr",
+          "value": 340.0,
+          "threshold": 500.0
+        },
+        {
+          "code": "R4",
+          "severity": "block",
+          "text": "Stock is under exchange surveillance (ASM/GSM)",
+          "metric": "asm_gsm_flag",
+          "value": 1.0,
+          "threshold": 0.0
+        }
+      ]
+    }
+  }
+]

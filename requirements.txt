@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+pyyaml
+pytest
+httpx
+
+# Track 2 — trading
+kiteconnect
+
+# Track 1 — sentiment/selection (listed so one venv serves the whole repo)
+ollama
+yfinance
+pandas
+numpy
+feedparser
