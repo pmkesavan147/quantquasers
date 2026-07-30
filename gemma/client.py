@@ -49,7 +49,14 @@ Backend = Literal["studio", "ollama", "remote", "stub"]
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = Path(os.getenv("GEMMA_CACHE_DIR", ROOT / "data" / "cache" / "gemma"))
 
-STUDIO_MODEL = os.getenv("GEMMA_STUDIO_MODEL", "gemma-4-26b-a4b-it")
+# gemma-4-31b-it, not the 26b MoE. Both are Gemma 4 on AI Studio, but the MoE
+# thinks until it hits max_output_tokens on anything longer than a headline: the
+# investor-profiling prompt burned 1597, 2497 and 2997 thinking tokens at
+# budgets of 1600, 2500 and 3000 and returned an empty string every time, only
+# answering at 6000 (86 s — past a serverless timeout). The dense 31b answers
+# the same prompt in 739 thinking tokens and 23 s. Cache keys exclude the model,
+# so the headline cache built on the 26b still replays unchanged.
+STUDIO_MODEL = os.getenv("GEMMA_STUDIO_MODEL", "gemma-4-31b-it")
 OLLAMA_MODEL = os.getenv("GEMMA_OLLAMA_MODEL", "gemma3:4b")
 REMOTE_URL = os.getenv("GEMMA_REMOTE_URL", "").rstrip("/")
 REMOTE_TIMEOUT = float(os.getenv("GEMMA_REMOTE_TIMEOUT_S", "120"))
@@ -63,10 +70,17 @@ CACHE_NAMESPACE = os.getenv("GEMMA_CACHE_NAMESPACE", "shared")
 # the answer. `thinking_config` cannot fix this; the API rejects it for Gemma.
 MAX_TOKENS = int(os.getenv("GEMMA_MAX_TOKENS", "1600"))
 
+# One retry at a bigger budget when the first attempt came back empty *because*
+# it ran out of tokens. Capped rather than unbounded: a serverless request that
+# waits three minutes for a model has already failed the user, and the rubric
+# answer underneath is a good one.
+MAX_TOKENS_CEILING = int(os.getenv("GEMMA_MAX_TOKENS_CEILING", "3200"))
+
 _lock = threading.Lock()
 _resolved: Backend | None = None
 _studio_client = None
 _last_model = "none"
+_last_error = ""
 
 
 def _api_key() -> str | None:
@@ -160,6 +174,16 @@ def last_model() -> str:
     return _last_model
 
 
+def last_error() -> str:
+    """Why the most recent call produced nothing — "" when it produced text.
+
+    Without this, a truncated response, an expired key and a dropped connection
+    all reach the UI as the same silent fallback, and the first thing anyone
+    asks when they see "rubric used alone" is which one it was.
+    """
+    return _last_error
+
+
 def status() -> dict:
     b = resolve_backend()
     return {
@@ -168,6 +192,8 @@ def status() -> dict:
         "api_key_present": _api_key() is not None,
         "cache_dir": str(CACHE_DIR),
         "cached_responses": len(list(CACHE_DIR.glob("*.json"))) if CACHE_DIR.exists() else 0,
+        "last_model": _last_model,
+        "last_error": _last_error,
     }
 
 
@@ -220,30 +246,67 @@ def json_instruction(schema: type[BaseModel]) -> str:
     )
 
 
+def _truncated(resp) -> bool:
+    """True when the model stopped because it ran out of tokens.
+
+    That is the one empty response a bigger budget can fix. An empty response
+    from a safety block or an empty prompt cannot be, and retrying it just costs
+    the user another 25 seconds.
+    """
+    for candidate in getattr(resp, "candidates", None) or []:
+        if "MAX_TOKENS" in str(getattr(candidate, "finish_reason", "")):
+            return True
+    return False
+
+
 def _studio_generate(prompt: str, schema: type[BaseModel] | None,
-                     system: str, temperature: float) -> str:
+                     system: str, temperature: float,
+                     max_tokens: int | None = None) -> str:
     from google.genai import types
 
     # Gemma models on the Gemini API do not take a system_instruction, so the
     # system prompt is prepended. JSON mode is likewise not guaranteed for the
     # open models — ask for JSON in words, then parse defensively upstream.
+    # `thinking_config` is not an option either: the API rejects it for Gemma
+    # with "Thinking budget is not supported for this model", so the only lever
+    # over thinking tokens is the total budget.
     full = f"{system.strip()}\n\n{prompt}" if system else prompt
     if schema is not None:
         full += json_instruction(schema)
 
-    resp = _studio_client.models.generate_content(  # type: ignore[union-attr]
-        model=STUDIO_MODEL,
-        contents=full,
-        config=types.GenerateContentConfig(
-            temperature=temperature,
-            max_output_tokens=MAX_TOKENS,
-        ),
-    )
-    return (resp.text or "").strip()
+    global _last_error
+    budget = max_tokens or MAX_TOKENS
+    while True:
+        resp = _studio_client.models.generate_content(  # type: ignore[union-attr]
+            model=STUDIO_MODEL,
+            contents=full,
+            config=types.GenerateContentConfig(
+                temperature=temperature,
+                max_output_tokens=budget,
+            ),
+        )
+        text = (resp.text or "").strip()
+        if text:
+            _last_error = ""  # a retry that worked is not an error
+            return text
+
+        if not _truncated(resp):
+            _last_error = "model returned an empty response"
+            return ""
+
+        thoughts = getattr(resp.usage_metadata, "thoughts_token_count", None)
+        _last_error = (
+            f"{STUDIO_MODEL} spent its whole {budget}-token budget thinking"
+            + (f" ({thoughts} thinking tokens)" if thoughts else "")
+        )
+        if budget >= MAX_TOKENS_CEILING:
+            return ""
+        budget = min(budget * 2, MAX_TOKENS_CEILING)
 
 
 def _ollama_generate(prompt: str, schema: type[BaseModel] | None,
-                     system: str, temperature: float) -> str:
+                     system: str, temperature: float,
+                     max_tokens: int | None = None) -> str:
     import ollama
 
     msgs = ([{"role": "system", "content": system}] if system else []) + [
@@ -255,14 +318,16 @@ def _ollama_generate(prompt: str, schema: type[BaseModel] | None,
         # Ollama constrains decoding to the schema, which is the single most
         # reliable way to get JSON out of a 4B model.
         format=schema.model_json_schema() if schema else None,
-        options={"temperature": temperature, "num_predict": MAX_TOKENS},
+        options={"temperature": temperature,
+                 "num_predict": max_tokens or MAX_TOKENS},
         keep_alive="30m",
     )
     return (resp.message.content or "").strip()
 
 
 def _remote_generate(prompt: str, schema: type[BaseModel] | None,
-                     system: str, temperature: float) -> str:
+                     system: str, temperature: float,
+                     max_tokens: int | None = None) -> str:
     """Ask a GPU box on the LAN — see `scripts/gemma_gpu_local.py --serve`."""
     import urllib.request
 
@@ -272,6 +337,7 @@ def _remote_generate(prompt: str, schema: type[BaseModel] | None,
             "system": system,
             "temperature": temperature,
             "schema": _schema_hint(schema) if schema else None,
+            "max_tokens": max_tokens or MAX_TOKENS,
         }
     ).encode()
     req = urllib.request.Request(
@@ -296,13 +362,15 @@ def generate(
     schema: type[BaseModel] | None = None,
     system: str = "",
     temperature: float = 0.0,
+    max_tokens: int | None = None,
 ) -> str:
     """Raw text from whichever backend is live. Never raises.
 
     Returns "" when no model could answer; callers must have a deterministic
-    fallback for that case, which is why every scorer here does.
+    fallback for that case, which is why every scorer here does. When it does
+    return "", `last_error()` says why.
     """
-    global _last_model
+    global _last_model, _last_error
     backend = resolve_backend()
     model = model_name(backend)
 
@@ -311,10 +379,12 @@ def generate(
     if cached is not None:
         response, cached_model = cached
         _last_model = cached_model
+        _last_error = ""
         return response
 
     if backend == "stub":
         _last_model = "fallback"
+        _last_error = "no model backend available (no API key, no local daemon)"
         return ""
 
     backends = {
@@ -322,10 +392,12 @@ def generate(
         "ollama": _ollama_generate,
         "remote": _remote_generate,
     }
+    _last_error = ""
     try:
-        text = backends[backend](prompt, schema, system, temperature)
-    except Exception:
+        text = backends[backend](prompt, schema, system, temperature, max_tokens)
+    except Exception as exc:
         _last_model = "fallback"
+        _last_error = f"{type(exc).__name__}: {exc}"[:300]
         return ""
 
     _last_model = model if text else "fallback"

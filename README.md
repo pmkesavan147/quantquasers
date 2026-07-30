@@ -73,10 +73,18 @@ python -m trading.engine.core --desk day --at 15:20   # intraday square-off
 
 | Backend | When | Notes |
 |---|---|---|
-| **AI Studio** | `GOOGLE_API_KEY` set | `gemma-4-26b-a4b-it`, free tier. The default. |
+| **AI Studio** | `GOOGLE_API_KEY` set | `gemma-4-31b-it`, free tier. The default. |
 | **Remote GPU** | `GEMMA_REMOTE_URL` set | a second laptop running `scripts/gemma_gpu_local.py --serve` |
 | **Ollama** | daemon answers | `ollama pull gemma3:4b` |
 | **Stub** | nothing else | deterministic keyword classifier; rows are labelled `model="fallback"` and confidence is halved |
+
+The default is the dense 31b rather than the `gemma-4-26b-a4b-it` MoE: both are
+Gemma 4 on the same free tier, but the MoE's thinking tokens come out of
+`max_output_tokens` and on prompts longer than a headline it spends the entire
+budget reasoning and returns nothing (measured: empty at 1600, 2500 and 3000
+tokens on the investor-profiling prompt; it only answered at 6000, taking 86 s).
+The 31b answers the same prompt in 739 thinking tokens and 23 s. `GEMMA_BACKEND`
+and `GEMMA_STUDIO_MODEL` override both choices.
 
 Responses are cached to `data/cache/gemma/` keyed by **prompt**, not by model, so
 a cache built on a GPU machine replays byte-for-byte on the demo laptop. Rehearse

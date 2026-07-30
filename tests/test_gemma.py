@@ -135,6 +135,104 @@ def test_the_token_budget_clears_gemma_4s_thinking_tokens():
     assert client.MAX_TOKENS >= 1000
 
 
+class _FakeResp:
+    """The shape of a google-genai response, only the parts the client reads."""
+
+    def __init__(self, text: str | None, finish: str, thoughts: int = 0):
+        self.text = text
+        self.candidates = [type("C", (), {"finish_reason": finish})()]
+        self.usage_metadata = type("U", (), {"thoughts_token_count": thoughts})()
+
+
+def _studio_stub(monkeypatch, responses: list[_FakeResp]) -> list[int]:
+    """Wire a fake AI Studio client; returns the budget each call asked for."""
+    budgets: list[int] = []
+    calls = iter(responses)
+
+    def generate_content(*, model, contents, config):
+        budgets.append(config.max_output_tokens)
+        return next(calls)
+
+    monkeypatch.setenv("GEMMA_BACKEND", "studio")
+    monkeypatch.setattr(client, "_resolved", "studio")
+    monkeypatch.setattr(
+        client, "_studio_client",
+        type("Client", (), {"models": type("M", (), {"generate_content": staticmethod(generate_content)})()})(),
+    )
+    return budgets
+
+
+def test_the_default_studio_model_is_not_the_thinking_moe():
+    """The 26b MoE spends its whole budget thinking on anything longer than a
+    headline — it returned nothing at 1600, 2500 and 3000 tokens for the
+    profiling prompt, which is what made the persona screen say the model was
+    unavailable while the API key was fine."""
+    assert client.STUDIO_MODEL == "gemma-4-31b-it"
+
+
+def test_an_answer_truncated_by_thinking_is_retried_with_a_bigger_budget(monkeypatch):
+    budgets = _studio_stub(monkeypatch, [
+        _FakeResp("", "FinishReason.MAX_TOKENS", thoughts=1597),
+        _FakeResp('{"ok": true}', "FinishReason.STOP"),
+    ])
+    assert client.generate("p", system="s") == '{"ok": true}'
+    assert budgets == [client.MAX_TOKENS, client.MAX_TOKENS * 2]
+    assert client.last_error() == ""
+
+
+def test_the_retry_stops_at_the_ceiling_rather_than_doubling_forever(monkeypatch):
+    budgets = _studio_stub(monkeypatch, [
+        _FakeResp("", "FinishReason.MAX_TOKENS", thoughts=n) for n in range(1, 9)
+    ])
+    assert client.generate("p", system="s") == ""
+    assert budgets[-1] == client.MAX_TOKENS_CEILING
+    assert max(budgets) <= client.MAX_TOKENS_CEILING
+    assert "thinking" in client.last_error()
+
+
+def test_an_empty_answer_that_is_not_truncation_is_not_retried(monkeypatch):
+    """A safety block or an empty prompt costs another 25 seconds to re-ask and
+    comes back just as empty."""
+    budgets = _studio_stub(monkeypatch, [_FakeResp("", "FinishReason.SAFETY")])
+    assert client.generate("p", system="s") == ""
+    assert len(budgets) == 1
+
+
+def test_a_per_call_token_budget_is_honoured(monkeypatch):
+    budgets = _studio_stub(monkeypatch, [_FakeResp("text", "FinishReason.STOP")])
+    client.generate("p", system="s", max_tokens=2400)
+    assert budgets == [2400]
+
+
+def test_a_failure_says_which_failure_it_was(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(client, "_resolved", "studio")
+    monkeypatch.setattr(client, "_studio_generate", boom)
+    assert client.generate("p", system="s") == ""
+    assert "connection reset" in client.last_error()
+    assert client.status()["last_error"] == client.last_error()
+
+
+def test_the_stub_backend_says_it_has_no_model_rather_than_going_quiet():
+    client.generate("p", system="s")
+    assert "no model backend" in client.last_error()
+
+
+def test_the_profiler_surfaces_the_reason_the_model_did_not_answer(monkeypatch):
+    """'Model unavailable' sent us looking at the API key while the model was
+    answering — and spending its entire budget on thinking tokens."""
+    monkeypatch.setattr(scorers, "generate", lambda *a, **k: "")
+    monkeypatch.setattr(scorers, "last_error",
+                        lambda: "gemma-4-31b-it spent its whole 1600-token budget thinking")
+    _, _, why = scorers.profile_user(
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text=LONG_ANSWERS,
+    )
+    assert "budget thinking" in why
+    assert "rubric" in why.lower()
+
+
 def test_an_out_of_range_materiality_is_clamped_not_rejected(monkeypatch):
     """The live model returns 6 on a 1-5 scale. Rejecting the whole reading for
     that would swap a real classification for the keyword fallback."""

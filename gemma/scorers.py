@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from core.contracts import EventType, HeadlineScore, Horizon
-from gemma.client import extract_json, generate, last_model
+from gemma.client import extract_json, generate, last_error, last_model
 
 # ── headline classification ──────────────────────────────────────────────
 CLASSIFIER_SYSTEM = (
@@ -273,7 +273,12 @@ def profile_user(
         out = _ProfileOut.model_validate(extract_json(raw))
         horizon = Horizon(out.trader_type.strip().lower())
     except Exception:
-        return None, 0.0, "Model unavailable or unparseable — rubric used alone."
+        # Say which failure it was. "Model unavailable" on its own sent us
+        # looking at the API key when the model was in fact answering and
+        # spending its entire token budget thinking.
+        why = last_error() or ("unreadable answer: " + raw.strip()[:80] if raw
+                               else "no answer")
+        return None, 0.0, f"Rubric used alone — {why}."
 
     confidence = max(0.0, min(1.0, out.confidence))
     return horizon, confidence, out.reasoning.strip()[:280]
@@ -382,6 +387,10 @@ def personality_report(
         ),
         system=REPORT_SYSTEM,
         temperature=0.4,
+        # 180 words of prose is ~250 tokens on top of the model's thinking, and
+        # this is the one call whose answer is long. Asking for the headroom up
+        # front is cheaper than being truncated into a retry.
+        max_tokens=2400,
     )
     if raw:
         return raw.strip()
