@@ -1,0 +1,41 @@
+symbol,name,cap_bucket,mcap_cr,asm_gsm_flag,mcap_source
+RELIANCE,Reliance Industries,large,1749613.3,0,yfinance
+TCS,Tata Consultancy Services,large,879846.5,0,yfinance
+HDFCBANK,HDFC Bank,large,1161461.7,0,yfinance
+ICICIBANK,ICICI Bank,large,1028576.2,0,yfinance
+INFY,Infosys,large,467829.7,0,yfinance
+BHARTIARTL,Bharti Airtel,large,1220780.6,0,yfinance
+SBIN,State Bank of India,large,946415.2,0,yfinance
+ITC,ITC,large,357152.5,0,yfinance
+LT,Larsen & Toubro,large,541774.8,0,yfinance
+HINDUNILVR,Hindustan Unilever,large,495270.3,0,yfinance
+SUNPHARMA,Sun Pharmaceutical,large,480130.9,0,yfinance
+MARUTI,Maruti Suzuki India,large,446074.3,0,yfinance
+TATAMOTORS,Tata Motors,large,384000,0,seed
+AXISBANK,Axis Bank,large,382355.6,0,yfinance
+KOTAKBANK,Kotak Mahindra Bank,large,387315.3,0,yfinance
+BAJFINANCE,Bajaj Finance,large,655053.3,0,yfinance
+ASIANPAINT,Asian Paints,large,263262.9,0,yfinance
+TITAN,Titan Company,large,430216.9,0,yfinance
+NESTLEIND,Nestle India,large,293238.8,0,yfinance
+ADANIPORTS,Adani Ports & SEZ,large,383401.8,0,yfinance
+NTPC,NTPC,large,334389.5,0,yfinance
+POWERGRID,Power Grid Corporation,large,265718.3,0,yfinance
+ONGC,Oil & Natural Gas Corporation,large,303927.0,0,yfinance
+COALINDIA,Coal India,large,257109.0,0,yfinance
+TATASTEEL,Tata Steel,large,233123.8,0,yfinance
+JSWSTEEL,JSW Steel,large,310199.5,0,yfinance
+GRASIM,Grasim Industries,large,210583.9,0,yfinance
+CIPLA,Cipla,large,118462.4,0,yfinance
+TECHM,Tech Mahindra,large,147848.2,0,yfinance
+WIPRO,Wipro,large,184322.0,0,yfinance
+PERSISTENT,Persistent Systems,mid,86156.7,0,yfinance
+MPHASIS,Mphasis,mid,44779.0,0,yfinance
+FEDERALBNK,Federal Bank,mid,87361.8,0,yfinance
+ASHOKLEY,Ashok Leyland,mid,92859.8,0,yfinance
+SUZLON,Suzlon Energy,mid,65146.4,0,yfinance
+HFCL,HFCL,small,28262.4,1,yfinance
+IDEA,Vodafone Idea,large,139437.5,0,yfinance
+RPOWER,Reliance Power,small,9648.8,1,yfinance
+JPPOWER,Jaiprakash Power Ventures,small,11870.2,1,yfinance
+SOMEMICRO,Demo Microcap (synthetic),micro,340,1,seed

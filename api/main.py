@@ -24,10 +24,15 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Track 3 runs Next.js on 3000.
+# Track 3 shipped Vite, not Next.js — 5173 is the dev server, 4173 is
+# `vite preview`. 3000 stays allowed so a Next.js port change needs no redeploy.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:4173", "http://127.0.0.1:4173",
+        "http://localhost:3000", "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,10 +49,31 @@ except ImportError:
     SENTIMENT_ROUTES = False
 
 
+@app.on_event("startup")
+def _warm_model() -> None:
+    """One throwaway generation at boot.
+
+    A cold local model takes ~10s on its first call and an AI Studio client
+    pays TLS setup once. Paying either during startup beats paying it while a
+    judge watches the onboarding spinner. Failure here is ignored by design —
+    `gemma.client` never raises, it downgrades.
+    """
+    import os
+
+    if os.getenv("GEMMA_WARM", "1") != "1":
+        return
+    from gemma.client import warm
+
+    warm()
+
+
 @app.get("/")
 def root() -> dict:
+    from gemma.client import status as gemma_status
+
     return {
         "service": "quantquasers",
         "sentiment_routes_mounted": SENTIMENT_ROUTES,
+        "gemma": gemma_status(),
         "docs": "/docs",
     }

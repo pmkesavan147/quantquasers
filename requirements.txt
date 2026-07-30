@@ -10,8 +10,10 @@ httpx
 kiteconnect
 
 # Track 1 — sentiment/selection (listed so one venv serves the whole repo)
-ollama
+google-genai          # Gemma 4 via Google AI Studio — the default backend
+ollama                # optional local backend, used only if the daemon answers
 yfinance
 pandas
 numpy
+pyarrow               # parquet price cache
 feedparser

@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "note": "SYNTHETIC headlines, written for offline demos and tests. Not real news. They are used only when Google News RSS and the disk cache are both unavailable; every row served from here is tagged origin='fixture' and the UI labels it.",
+    "age_hours": "hours before 'now', rebased at read time so recency weighting behaves"
+  },
+  "RELIANCE": [
+    {"title": "Reliance Q1 profit beats street estimates on retail margin expansion", "source": "fixture:Business Standard", "age_hours": 5},
+    {"title": "Reliance Jio adds record subscribers, ARPU inches up", "source": "fixture:Mint", "age_hours": 20},
+    {"title": "Brokerage raises Reliance target citing new energy ramp-up", "source": "fixture:Moneycontrol", "age_hours": 44},
+    {"title": "Crude spike pressures refining margins across Indian majors", "source": "fixture:Economic Times", "age_hours": 61}
+  ],
+  "TCS": [
+    {"title": "TCS wins multi-year deal with European retailer", "source": "fixture:Mint", "age_hours": 7},
+    {"title": "TCS Q1 revenue misses estimates as discretionary spend stays weak", "source": "fixture:Business Standard", "age_hours": 26},
+    {"title": "TCS announces buyback at premium to market price", "source": "fixture:Moneycontrol", "age_hours": 50}
+  ],
+  "INFY": [
+    {"title": "Infosys raises FY guidance after large BFSI order win", "source": "fixture:Economic Times", "age_hours": 9},
+    {"title": "Infosys CFO resigns, company begins search for successor", "source": "fixture:Mint", "age_hours": 33},
+    {"title": "Analysts split on Infosys margin trajectory after wage hikes", "source": "fixture:Moneycontrol", "age_hours": 58}
+  ],
+  "HDFCBANK": [
+    {"title": "HDFC Bank deposit growth outpaces credit growth in Q1 update", "source": "fixture:Business Standard", "age_hours": 6},
+    {"title": "RBI approves HDFC Bank's appointment of new executive director", "source": "fixture:Mint", "age_hours": 30},
+    {"title": "HDFC Bank asset quality steady, slippages contained", "source": "fixture:Moneycontrol", "age_hours": 52}
+  ],
+  "ICICIBANK": [
+    {"title": "ICICI Bank net profit rises on lower provisions", "source": "fixture:Economic Times", "age_hours": 11},
+    {"title": "ICICI Bank flags rising unsecured retail stress in analyst call", "source": "fixture:Mint", "age_hours": 35},
+    {"title": "Brokerage upgrades ICICI Bank on best-in-class return ratios", "source": "fixture:Moneycontrol", "age_hours": 64}
+  ],
+  "TATAMOTORS": [
+    {"title": "Tata Motors bags large electric bus order from state transport body", "source": "fixture:Business Standard", "age_hours": 4},
+    {"title": "JLR volumes soften in China, Tata Motors flags mix pressure", "source": "fixture:Mint", "age_hours": 22},
+    {"title": "Tata Motors domestic PV market share improves month-on-month", "source": "fixture:Moneycontrol", "age_hours": 47}
+  ],
+  "ITC": [
+    {"title": "ITC hotels demerger receives final tribunal approval", "source": "fixture:Economic Times", "age_hours": 13},
+    {"title": "GST council defers decision on tobacco cess structure", "source": "fixture:Mint", "age_hours": 39},
+    {"title": "ITC FMCG segment margin expands for fourth straight quarter", "source": "fixture:Business Standard", "age_hours": 66}
+  ],
+  "LT": [
+    {"title": "L&T order inflow hits record on Middle East infrastructure wins", "source": "fixture:Moneycontrol", "age_hours": 8},
+    {"title": "L&T flags execution delays in two domestic hydel projects", "source": "fixture:Mint", "age_hours": 41},
+    {"title": "L&T board approves dividend, order book at all-time high", "source": "fixture:Economic Times", "age_hours": 70}
+  ],
+  "SUNPHARMA": [
+    {"title": "Sun Pharma receives USFDA approval for specialty dermatology drug", "source": "fixture:Business Standard", "age_hours": 12},
+    {"title": "USFDA issues observations for Sun Pharma's Halol facility", "source": "fixture:Mint", "age_hours": 37},
+    {"title": "Sun Pharma specialty revenue crosses guidance for the quarter", "source": "fixture:Moneycontrol", "age_hours": 59}
+  ],
+  "COALINDIA": [
+    {"title": "Coal India production up on improved rake availability", "source": "fixture:Economic Times", "age_hours": 15},
+    {"title": "Coal India announces interim dividend, highest payout in three years", "source": "fixture:Mint", "age_hours": 43},
+    {"title": "E-auction premiums moderate, pressuring Coal India realisations", "source": "fixture:Business Standard", "age_hours": 68}
+  ],
+  "WIPRO": [
+    {"title": "Wipro wins large managed services contract in banking", "source": "fixture:Moneycontrol", "age_hours": 10},
+    {"title": "Wipro Q1 profit falls short as attrition costs bite", "source": "fixture:Mint", "age_hours": 34},
+    {"title": "Wipro announces leadership rejig in Americas business", "source": "fixture:Economic Times", "age_hours": 62}
+  ],
+  "TITAN": [
+    {"title": "Titan jewellery revenue grows on strong wedding season demand", "source": "fixture:Business Standard", "age_hours": 6},
+    {"title": "Gold price volatility hits Titan studded ratio, margins narrow", "source": "fixture:Mint", "age_hours": 28},
+    {"title": "Titan opens flagship stores across three metros", "source": "fixture:Moneycontrol", "age_hours": 55}
+  ],
+  "ADANIPORTS": [
+    {"title": "Adani Ports cargo volumes up on container throughput gains", "source": "fixture:Economic Times", "age_hours": 9},
+    {"title": "Adani Ports raises funds via QIP to refinance overseas debt", "source": "fixture:Mint", "age_hours": 31},
+    {"title": "Regulator seeks clarification on port concession terms", "source": "fixture:Business Standard", "age_hours": 57}
+  ],
+  "MARUTI": [
+    {"title": "Maruti Suzuki hikes prices across models, cites input costs", "source": "fixture:Moneycontrol", "age_hours": 14},
+    {"title": "Maruti exports hit monthly record on Africa demand", "source": "fixture:Mint", "age_hours": 36},
+    {"title": "Maruti flags weak entry-level hatchback demand", "source": "fixture:Economic Times", "age_hours": 63}
+  ],
+  "SBIN": [
+    {"title": "SBI net interest margin holds steady despite deposit repricing", "source": "fixture:Business Standard", "age_hours": 7},
+    {"title": "SBI raises infrastructure bonds at competitive coupon", "source": "fixture:Mint", "age_hours": 29},
+    {"title": "SBI flags slippages in agriculture portfolio", "source": "fixture:Moneycontrol", "age_hours": 54}
+  ],
+  "PERSISTENT": [
+    {"title": "Persistent Systems posts industry-leading sequential growth", "source": "fixture:Moneycontrol", "age_hours": 11},
+    {"title": "Persistent Systems wins healthcare platform modernisation deal", "source": "fixture:Mint", "age_hours": 38}
+  ],
+  "FEDERALBNK": [
+    {"title": "Federal Bank deposit franchise strengthens in NRI segment", "source": "fixture:Economic Times", "age_hours": 16},
+    {"title": "Federal Bank credit cost guidance revised lower", "source": "fixture:Business Standard", "age_hours": 45}
+  ],
+  "HFCL": [
+    {"title": "HFCL bags optical fibre order from telecom operator", "source": "fixture:Mint", "age_hours": 13},
+    {"title": "HFCL promoter pledges additional shares for working capital", "source": "fixture:Moneycontrol", "age_hours": 40},
+    {"title": "HFCL flagged under enhanced surveillance for the coming settlement", "source": "fixture:Economic Times", "age_hours": 58}
+  ],
+  "SUZLON": [
+    {"title": "Suzlon order book swells on repeat orders from IPP clients", "source": "fixture:Business Standard", "age_hours": 12},
+    {"title": "Suzlon reports narrower loss, debt reduction on track", "source": "fixture:Mint", "age_hours": 42}
+  ],
+  "IDEA": [
+    {"title": "Vodafone Idea subscriber losses continue, ARPU flat", "source": "fixture:Moneycontrol", "age_hours": 10},
+    {"title": "Vodafone Idea board approves fundraise via preferential allotment", "source": "fixture:Economic Times", "age_hours": 33},
+    {"title": "Tribunal hearing on AGR dues adjourned again", "source": "fixture:Mint", "age_hours": 60}
+  ],
+  "RPOWER": [
+    {"title": "Reliance Power flagged under short-term ASM framework", "source": "fixture:Business Standard", "age_hours": 15},
+    {"title": "Reliance Power settles lender dues, files exchange disclosure", "source": "fixture:Mint", "age_hours": 44}
+  ],
+  "JPPOWER": [
+    {"title": "Jaiprakash Power insolvency proceedings see fresh resolution bid", "source": "fixture:Moneycontrol", "age_hours": 18},
+    {"title": "Jaiprakash Power plant load factor improves quarter-on-quarter", "source": "fixture:Economic Times", "age_hours": 49}
+  ]
+}
