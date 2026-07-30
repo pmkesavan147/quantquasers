@@ -43,7 +43,7 @@ news ─▶ Gemma scores each headline ─▶ Python weights them (materiality �
 ## Quickstart
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # requirements.txt is the lean runtime set
 cp .env.example .env                 # then paste GOOGLE_API_KEY (free tier)
 
 pytest -q                            # 260 passed, offline, no model needed
@@ -159,6 +159,42 @@ live is the one dishonesty this project cannot afford.
 * `report.headline_models` — which model scored the news, `fallback` included
 * `GET /api/gemma/status` — backend, model, cached response count
 * `GET /api/health` — mode, gate state (and why it is shut), quote source
+
+## Deployed
+
+| | URL |
+|---|---|
+| UI | https://sentiment-portfolio.vercel.app |
+| API | https://quantquasers-api.vercel.app · [`/docs`](https://quantquasers-api.vercel.app/docs) |
+
+Two Vercel projects from this one repo: the UI is rooted at
+`sentiment-portfolio/`, the API is the whole Python app behind a single function
+(`api/index.py`, wired in `vercel.json`).
+
+Serverless changes two things, both by environment rather than by code:
+
+* **Data.** `SNAPSHOT=1` — a request cannot wait on yfinance for 40 symbols, so
+  the deployed build serves `data/snapshot/` and reports `quant_source:
+  snapshot` instead of `live`. Refresh it with
+  `python -m scripts.build_snapshot`.
+* **The journal.** The filesystem is wiped between invocations, and the
+  portfolio is *derived* by replaying the journal — so a deployed instance keeps
+  it in Supabase Postgres. RLS is on with no policies (only the service role key
+  reaches the table) and an UPDATE/DELETE trigger makes append-only something
+  the database enforces.
+
+Environment variables on the API project:
+
+| Variable | Purpose | Without it |
+|---|---|---|
+| `SUPABASE_URL` | the ledger's home | falls back to `/tmp` SQLite, wiped between requests |
+| `SUPABASE_SERVICE_ROLE_KEY` | the only key that can read or write the ledger | as above |
+| `GOOGLE_API_KEY` | Gemma 4 on AI Studio | keyword fallback, every row labelled `model="fallback"` |
+| `SNAPSHOT` | force snapshot mode | on automatically when `VERCEL` is set |
+| `CORS_ORIGINS` | extra origins, comma-separated | `*.vercel.app` and localhost are already allowed |
+
+`GET /api/health` reports which journal backend and which data source the
+running instance actually has, so none of the above is ever a guess.
 
 ## Three tracks
 

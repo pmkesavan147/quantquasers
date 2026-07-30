@@ -2,14 +2,21 @@
 
 Two terminals, six minutes, no network required after the rehearsal step.
 
+Deployed, if you would rather not run anything:
+**https://sentiment-portfolio.vercel.app** (API: https://quantquasers-api.vercel.app).
+The deployed build serves the committed snapshot and says so — `/api/health`
+reports `data.captured_at`, and every candidate list reports `quant_source:
+snapshot`. Rebuild it with `python -m scripts.build_snapshot` before judging day.
+
 ## Before you leave the house
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env                    # paste GOOGLE_API_KEY
 python -m scripts.check_gemma           # must print "OK — a model answered"
 python -m scripts.build_universe        # live market caps into data/universe.csv
 python -m scripts.warm_cache --with-gemma
+python -m scripts.build_snapshot --gemma   # refresh what the deployed build serves
 ```
 
 That last command fetches prices and headlines for all 40 symbols and scores
