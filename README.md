@@ -46,7 +46,7 @@ news ─▶ Gemma scores each headline ─▶ Python weights them (materiality �
 pip install -r requirements-dev.txt   # requirements.txt is the lean runtime set
 cp .env.example .env                 # then paste GOOGLE_API_KEY (free tier)
 
-pytest -q                            # 260 passed, offline, no model needed
+pytest -q                            # 266 passed, offline, no model needed
 python -m scripts.check_gemma        # proves a model answers before you demo
 python -m scripts.build_universe     # refresh data/universe.csv market caps
 python -m scripts.warm_cache         # pre-fetch prices + headlines

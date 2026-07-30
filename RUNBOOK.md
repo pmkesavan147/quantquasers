@@ -26,7 +26,7 @@ finishes, the entire demo runs from disk.
 Rehearse the failure case too:
 
 ```bash
-OFFLINE=1 pytest -q                     # 260 passed
+OFFLINE=1 pytest -q                     # 266 passed
 OFFLINE=1 uvicorn api.main:app          # then click through the whole UI
 ```
 
