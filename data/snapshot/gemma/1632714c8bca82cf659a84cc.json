@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"Asian Paints shares jump 3% after Q4 beat; brokerages see up to 34% upside but divided on outlook - Moneycontrol.com\"\nCompany: Asian Paints (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\n  \"sentiment\": 0.6,\n  \"event_type\": \"earnings\",\n  \"materiality\": 4,\n  \"rationale\": \"shares jump 3% after Q4 beat\"\n}"
+}

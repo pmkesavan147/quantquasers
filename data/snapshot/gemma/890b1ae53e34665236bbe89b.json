@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"Vodafone Idea hits \u20b915, next target \u20b920? Here's what analyst says - Business Standard\"\nCompany: Vodafone Idea (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\n  \"sentiment\": 0.4,\n  \"event_type\": \"analyst_view\",\n  \"materiality\": 2,\n  \"rationale\": \"analyst says next target \u20b920\"\n}"
+}

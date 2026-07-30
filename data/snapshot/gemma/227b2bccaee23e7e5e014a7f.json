@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"Stocks to Watch Today: Emcure, Aurobindo Pharma, HFCL, RBL Bank, Coal India, Tata Steel, ITC Hotels, Power... - Moneycontrol.com\"\nCompany: Coal India (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\n  \"sentiment\": 0.0,\n  \"event_type\": \"other\",\n  \"materiality\": 1,\n  \"rationale\": \"headline lists 'Stocks to Watch Today' including Coal India\"\n}"
+}

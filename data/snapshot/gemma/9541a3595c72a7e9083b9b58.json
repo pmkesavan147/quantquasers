@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"Adani Ports and Special Economic Zone - 9 large-cap stocks where DIIs are trimming their stakes in Q3 - The Economic Times\"\nCompany: Adani Ports & SEZ (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\n  \"sentiment\": -0.4,\n  \"event_type\": \"other\",\n  \"materiality\": 2,\n  \"rationale\": \"DIIs are trimming their stakes in Q3\"\n}"
+}

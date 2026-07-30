@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"TCS, HCLTech, Wipro, Infosys, Mphasis: Why did Nifty IT rise 3% today? - Business Standard\"\nCompany: Mphasis (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\"sentiment\": 0.5, \"event_type\": \"macro\", \"materiality\": 2, \"rationale\": \"Nifty IT rise 3% today\"}"
+}

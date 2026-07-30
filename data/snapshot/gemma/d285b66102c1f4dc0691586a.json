@@ -1,0 +1,5 @@
+{
+ "model": "gemma-4-26b-a4b-it",
+ "prompt": "Headline: \"TCS dips 2%, trades near 6-year low ahead of Q1 results; IT sector in focus - Business Standard\"\nCompany: Tata Consultancy Services (NSE-listed)\n\nClassify it for this company's shareholders.\n\nsentiment   -1.0 (very bad for the company) to 1.0 (very good)\nevent_type  one of: earnings, order_win, regulatory, promoter_pledge, fundraise, litigation, management_change, analyst_view, macro, other\nmateriality 1 (noise) to 5 (moves the business)\nrationale   one short clause, under 15 words, quoting only the headline\n",
+ "response": "{\n  \"sentiment\": -0.6,\n  \"event_type\": \"earnings\",\n  \"materiality\": 3,\n  \"rationale\": \"TCS dips 2%, trades near 6-year low ahead of Q1 results\"\n}"
+}
