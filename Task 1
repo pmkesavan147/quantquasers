@@ -1,0 +1,224 @@
+!pip install -q -U unsloth 
+import json
+import re
+import textwrap
+from unsloth import FastModel
+
+# Unsloth's pre-quantized Gemma 4 checkpoints — pick based on your GPU:
+#   'unsloth/gemma-4-E2B-it-unsloth-bnb-4bit'  -> smallest, fastest, fits any free Colab GPU
+#   'unsloth/gemma-4-E4B-it-unsloth-bnb-4bit'  -> good quality/speed balance (used below)
+#   'unsloth/gemma-4-26B-A4B-it'               -> needs a bigger GPU (A100/L4)
+#   'unsloth/gemma-4-31B-it-unsloth-bnb-4bit'  -> needs a bigger GPU (A100/L4)
+MODEL_ID = 'unsloth/gemma-4-E4B-it-unsloth-bnb-4bit'
+
+print(f'Loading {MODEL_ID} ...')
+model, tokenizer = FastModel.from_pretrained(
+    model_name=MODEL_ID,
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+FastModel.for_inference(model)  # enables Unsloth's faster inference path
+print('Model loaded.')
+
+
+def call_gemma(prompt: str, max_new_tokens: int = 400, temperature: float = 0.2) -> str:
+    """Send a prompt to Gemma and return the generated text.
+
+    Gemma 4 is natively multimodal, so Unsloth loads a *processor*, not a plain
+    tokenizer. That means: (1) message content must be a list of typed parts,
+    even for text-only prompts, and (2) apply_chat_template needs
+    return_dict=True to hand back a tokenized tensor dict instead of a raw
+    rendered string.
+    """
+    messages = [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}]
+    inputs = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=True,
+        return_dict=True,
+        return_tensors='pt',
+    ).to(model.device)
+    output = model.generate(
+        **inputs,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        do_sample=temperature > 0,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    input_len = inputs['input_ids'].shape[-1]
+    generated = output[0][input_len:]
+    return tokenizer.decode(generated, skip_special_tokens=True).strip()
+
+
+### CELL 4 — quiz definition
+QUIZ_QUESTIONS = [
+    {
+        'id': 'horizon',
+        'text': 'How long do you typically plan to hold an investment?',
+        'type': 'mcq',
+        'options': {'a': 'Minutes to hours (intraday)', 'b': 'Days to weeks (swing)', 'c': 'Months to years (long-term)'},
+        'points': {'a': 1, 'b': 2, 'c': 3},
+    },
+    {
+        'id': 'drawdown',
+        'text': "Your portfolio drops 20% in a month. What's your instinct?",
+        'type': 'mcq',
+        'options': {'a': 'Sell to stop further loss', 'b': 'Hold and wait it out', 'c': 'Buy more at the lower price'},
+        'points': {'a': 1, 'b': 2, 'c': 3},
+    },
+    {
+        'id': 'liquidity',
+        'text': 'How soon might you need to access this money?',
+        'type': 'mcq',
+        'options': {'a': 'Within a few weeks', 'b': 'Within a year', 'c': 'Not for several years'},
+        'points': {'a': 1, 'b': 2, 'c': 3},
+    },
+    {
+        'id': 'experience',
+        'text': 'How would you describe your trading/investing experience?',
+        'type': 'mcq',
+        'options': {'a': 'Beginner', 'b': 'Some experience', 'c': 'Experienced / active trader'},
+        'points': {'a': 1, 'b': 2, 'c': 3},
+    },
+    {
+        'id': 'frequency',
+        'text': 'How often do you want to actively check or adjust your portfolio?',
+        'type': 'mcq',
+        'options': {'a': 'Daily or more', 'b': 'Weekly', 'c': 'Rarely, set and forget'},
+        'points': {'a': 3, 'b': 2, 'c': 1},
+    },
+    {
+        'id': 'open_outlook',
+        'text': 'In your own words: how do you feel about the markets right now, and why?',
+        'type': 'open',
+    },
+    {
+        'id': 'open_goal',
+        'text': 'In your own words: what does a successful outcome look like for you with this money?',
+        'type': 'open',
+    },
+]
+
+
+### CELL 5 — collect answers + rubric scoring
+def run_quiz() -> dict:
+    answers = {}
+    for q in QUIZ_QUESTIONS:
+        print(f"\n{q['text']}")
+        if q['type'] == 'mcq':
+            for key, label in q['options'].items():
+                print(f'  {key}) {label}')
+            while True:
+                choice = input('Your answer (letter): ').strip().lower()
+                if choice in q['options']:
+                    answers[q['id']] = choice
+                    break
+                print('Please enter a valid option letter.')
+        else:
+            answers[q['id']] = input('Your answer: ').strip()
+    return answers
+
+
+def score_rubric(answers: dict) -> dict:
+    total, count = 0, 0
+    for q in QUIZ_QUESTIONS:
+        if q['type'] == 'mcq':
+            total += q['points'][answers[q['id']]]
+            count += 1
+    risk_score = round(total / (count * 3), 2)  # normalized 0.0 (conservative) - 1.0 (aggressive)
+    return {'risk_score': risk_score}
+
+
+### CELL 6 — classification via Gemma (structured JSON output)
+def extract_json(text: str) -> dict:
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match:
+        raise ValueError(f'No JSON object found in model output:\n{text}')
+    return json.loads(match.group(0))
+
+
+CLASSIFY_PROMPT = (
+    "You are classifying an investor's trading personality based on quiz answers.\n"
+    'Output ONLY a valid JSON object. No explanation, no markdown formatting, no code fences.\n\n'
+    'Rubric risk score (0 = very conservative, 1 = very aggressive): {risk_score}\n\n'
+    'Structured answers: {mcq_answers}\n'
+    'Open-ended answers:\n'
+    '- Market outlook: "{open_outlook}"\n'
+    '- Goal: "{open_goal}"\n\n'
+    'Output format exactly:\n'
+    '{{"trader_type": "long_term or swing or intraday or hybrid", '
+    '"risk_tolerance": 0.0 to 1.0, '
+    '"confidence": 0.0 to 1.0, '
+    '"reasoning": "one sentence explanation"}}\n'
+)
+
+
+def classify_profile(answers: dict, rubric: dict) -> dict:
+    mcq_answers = {q['id']: answers[q['id']] for q in QUIZ_QUESTIONS if q['type'] == 'mcq'}
+    prompt = CLASSIFY_PROMPT.format(
+        risk_score=rubric['risk_score'],
+        mcq_answers=mcq_answers,
+        open_outlook=answers.get('open_outlook', ''),
+        open_goal=answers.get('open_goal', ''),
+    )
+    raw = call_gemma(prompt, max_new_tokens=200, temperature=0.1)
+    try:
+        result = extract_json(raw)
+    except ValueError:
+        # fallback if Gemma's output isn't clean JSON — never crash the pipeline
+        result = {
+            'trader_type': 'hybrid',
+            'risk_tolerance': rubric['risk_score'],
+            'confidence': 0.3,
+            'reasoning': 'Fallback used: model output could not be parsed as JSON.',
+        }
+    # sanity check: if Gemma disagrees sharply with the hand-written rubric, lower confidence
+    if abs(result.get('risk_tolerance', 0) - rubric['risk_score']) > 0.35:
+        result['confidence'] = min(result.get('confidence', 0.5), 0.4)
+    return result
+
+
+### CELL 7 — personality report generation via Gemma (free text, not JSON)
+REPORT_PROMPT = (
+    'Write a friendly, plain-English investor personality report based on this profile.\n'
+    'Do not use markdown headers or bullet points — write in short paragraphs.\n'
+    'Keep it under 250 words. Do not give specific buy/sell advice or exact percentages.\n\n'
+    'Trader type: {trader_type}\n'
+    'Risk tolerance (0 = very conservative, 1 = very aggressive): {risk_tolerance}\n'
+    "Model's reasoning: {reasoning}\n"
+    'User\'s stated market outlook: "{open_outlook}"\n'
+    'User\'s stated goal: "{open_goal}"\n\n'
+    'Cover: a short overview of what this trading style means, one or two likely strengths, '
+    'one potential blind spot to watch for, and one practical tip. End with a one-line reminder '
+    'that this is not financial advice.\n'
+)
+
+
+def generate_personality_report(profile: dict, answers: dict) -> str:
+    prompt = REPORT_PROMPT.format(
+        trader_type=profile['trader_type'],
+        risk_tolerance=profile['risk_tolerance'],
+        reasoning=profile.get('reasoning', ''),
+        open_outlook=answers.get('open_outlook', ''),
+        open_goal=answers.get('open_goal', ''),
+    )
+    return call_gemma(prompt, max_new_tokens=400, temperature=0.4)
+
+
+### CELL 8 — run everything
+if __name__ == '__main__':
+    user_answers = run_quiz()
+    rubric_result = score_rubric(user_answers)
+    user_profile = classify_profile(user_answers, rubric_result)
+
+    print('\n' + '=' * 50)
+    print('CLASSIFICATION')
+    print('=' * 50)
+    print(json.dumps(user_profile, indent=2))
+
+    personality_report = generate_personality_report(user_profile, user_answers)
+
+    print('\n' + '=' * 50)
+    print('PERSONALITY REPORT')
+    print('=' * 50)
+    print(textwrap.fill(personality_report, width=80))
