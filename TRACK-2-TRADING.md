@@ -138,6 +138,7 @@ trading/models.py               ProposedOrder · RiskVerdict · Fill · JournalE
 trading/config.py               RiskLimits per desk, loaded frozen
 trading/desks.yaml              three desks, allocations, params
 trading/desks.py                Desk → proposes orders from Candidate[]
+trading/sentiment_rules.py      entry gate · conviction sizing · exit triggers (§3.5)
 trading/risk/manager.py         THE CRO — every order passes through
 trading/execution/broker.py     Protocol
 trading/execution/paper.py      simulated fills with the real cost model
@@ -190,11 +191,129 @@ desks:
 Allocations sum to 100. Each desk gets `MAX_CAPITAL * allocation_pct / 100`
 and cannot spend beyond it — enforced in the risk manager, not the desk.
 
-**Desk logic** (`trading/desks.py`) is deliberately thin: take Track 1's
-`Candidate[]` for your horizon, drop anything not `SUITABLE`, take the top
-`max_positions` by `composite_score`, size to the desk's remaining room, emit
-`ProposedOrder[]` with `reason` set to a one-line summary. Exits come from the
-desk's own params — stop-loss, target, square-off, max-hold.
+Allocation caps are enforced in the risk manager, not the desk. Everything
+about *which* stock and *how much* is §3.5.
+
+## 3.5 Sentiment → order — the core of this track
+
+`composite_score` from Track 1 blends sentiment with momentum and liquidity, so
+a high score does **not** imply positive sentiment. Ranking on it alone will buy
+stocks with bad news. Sentiment gets its own gate, its own sizing, and its own
+exit.
+
+### Entry gate — all conditions, per desk
+
+```yaml
+# extends each desk's params in desks.yaml
+day:
+  entry:
+    min_sentiment: 0.30        # SymbolSentiment.score
+    min_confidence: 0.60
+    min_articles: 3
+    max_sentiment_age_hours: 6
+    max_prior_move_pct: 3.0    # lag guard, today's move
+swing:
+  entry:
+    min_sentiment: 0.20
+    min_confidence: 0.50
+    min_articles: 4
+    max_sentiment_age_hours: 48
+    max_prior_move_pct: 8.0    # over 5 sessions
+long_term:
+  entry:
+    min_sentiment: 0.10
+    min_confidence: 0.40
+    min_articles: 5
+    max_sentiment_age_hours: 168
+    max_prior_move_pct: 15.0   # over 20 sessions
+```
+
+Shorter horizon ⇒ stricter thresholds and fresher news, because there's less
+time for a weak signal to be right.
+
+Plus a hard event block, all desks:
+```python
+BLOCKED_EVENTS = {"promoter_pledge", "litigation", "regulatory"}
+```
+If any driver headline inside the freshness window carries one of these, no
+entry — whatever the score says. A positive aggregate sentiment sitting on top
+of a pledge-increase headline is exactly the case where the average lies.
+
+**The lag guard** answers the standard objection to sentiment trading: by the
+time news is measurable, price has often already moved. If the stock has already
+run more than `max_prior_move_pct` in the direction sentiment implies, skip it —
+the signal is priced in. Journal the skip with reason `sentiment_already_priced`.
+Being able to show that skip is a strong answer to a sharp judge.
+
+### Conviction sizing
+
+```python
+conviction = clip(sentiment.score, 0.0, 1.0) * sentiment.confidence   # 0..1
+slot_value = desk_capital / desk.params.max_positions
+order_value = slot_value * (0.5 + 0.5 * conviction)     # 50%..100% of a slot
+qty = int(order_value / ltp)
+```
+
+Floor at half a slot so a marginal signal takes a small position rather than
+none; ceiling at one slot so conviction can never breach the allocation. The
+risk manager's 10% per-position cap still sits underneath and can resize —
+sizing is a desk *preference*, the cap is a *limit*.
+
+### Exit — four triggers, first to fire wins
+
+| # | Trigger | Condition |
+|---|---|---|
+| 1 | `sentiment_reversal` | score falls below `exit_sentiment` (day `0.0`, swing `-0.10`, long `-0.20`) |
+| 2 | `blocked_event` | a `BLOCKED_EVENTS` headline appears for a held symbol |
+| 3 | `stop_loss` / `target` | desk price params |
+| 4 | `time_exit` | `square_off` (day) · `max_hold_days` (swing) · `rebalance` (long) |
+
+Write the trigger name into the `ProposedOrder.reason` and the journal. The
+distribution of exit reasons across a session is the most interesting artefact
+this system produces — *"6 exits, 4 of them on sentiment reversal before the
+stop was hit"* is a real result. Price-only exits are not.
+
+Exit thresholds sit **below** entry thresholds deliberately (enter at +0.30,
+exit at 0.0 for the day desk). Equal thresholds cause churn — the position
+flip-flops on noise around a single number.
+
+### Staleness: no new entries, but do not force-exit
+
+If `now - sentiment.as_of` exceeds the desk's window, the desk proposes **no new
+entries** and holds existing positions. Stale data is an absence of information,
+not a sell signal — force-exiting on it would make a Wi-Fi outage into a
+liquidation event. Journal an `alert` so the UI can show *"day desk idle —
+sentiment stale by 9h."*
+
+### Re-scoring cadence
+
+| Desk | Re-pull sentiment | Why |
+|---|---|---|
+| day | every 15 min during market hours | intraday reversal must be catchable |
+| swing | once pre-open, once at 14:00 | no need for tick-level news |
+| long_term | daily pre-open | thesis-level changes only |
+
+Poll `GET /api/sentiment/{symbol}` for held symbols on the desk's cadence. No
+new contract is needed — `SymbolSentiment.drivers[].event_type` and `.as_of`
+already carry everything the exit logic reads.
+
+### Where this lives
+
+`trading/sentiment_rules.py` — pure functions, no network, no LLM:
+
+```python
+def entry_allowed(cand: Candidate, desk: DeskConfig, now: datetime
+                  ) -> tuple[bool, str | None]:      # (ok, reason_if_not)
+
+def conviction_qty(cand: Candidate, desk: DeskConfig, ltp: float) -> int
+
+def exit_trigger(pos: Position, sent: SymbolSentiment, desk: DeskConfig,
+                 ltp: float, now: datetime) -> str | None
+```
+
+Three pure functions over plain data. Unit-testable in milliseconds against
+Track 1's fixtures, which means you can build and prove this whole section
+before their live API exists.
 
 ## 4. The risk manager — one CRO, below every desk
 
@@ -286,25 +405,42 @@ journal, not stored separately — so the ledger can't disagree with the book.
 | 0.0–0.5 | Read the reference repo. Scaffold `trading/`. |
 | 0.5–1.0 | Wait on `core/contracts.py`; meanwhile port `models.py` + journal |
 | 1.0–2.5 | `journal/store.py` + `risk/manager.py` (port + rules 9–11) |
-| 2.5–4.0 | `costs.py` + `paper.py`, replay-from-journal working |
-| 4.0–5.5 | `desks.yaml` + `desks.py` + `engine/core.py` — all three desks run on fixtures |
-| 5.5–7.0 | **Checkpoint 6h:** fixture candidates → orders → verdicts → paper fills → journal |
+| 2.5–3.5 | `costs.py` + `paper.py`, replay-from-journal working |
+| 3.5–5.0 | **`sentiment_rules.py` (§3.5) + its tests** — the core of your track |
+| 5.0–6.0 | `desks.yaml` + `desks.py` + `engine/core.py` — all three desks run on fixtures |
+| 6.0–7.0 | **Checkpoint 6h:** fixture candidates → orders → verdicts → paper fills → journal |
 | 7.0–8.5 | `kite.py` + `gate.py`, gate tests |
 | 8.5–10.0 | `api/routes_trading.py` |
 | 10.0–12.0 | Integration, seed a plausible journal for the demo, rehearse |
 
 **Cut list if behind, in order:** Kite live order path → keep `quote()` only ·
-day desk square-off scheduler → manual trigger button · rebalance logic → skip.
+day desk square-off scheduler → manual trigger button · long-term rebalance →
+skip · re-scoring cadence → single manual "re-score" button.
+
+**Not on the cut list:** the sentiment entry gate and the sentiment exit
+trigger. Without those two you have a momentum bot with a news widget bolted on,
+which is the thing every other team will have built.
 
 ## 8. Verification
 
 ```bash
-pytest tests/test_risk.py          # every rule fires, none can be relaxed
-pytest tests/test_gate.py          # locked gate returns paper under all env combos
-pytest tests/test_isolation.py     # import-graph: trading/ never imports gemma/
+pytest tests/test_sentiment_rules.py   # entry gate, conviction sizing, exits
+pytest tests/test_risk.py              # every rule fires, none can be relaxed
+pytest tests/test_gate.py              # locked gate returns paper under all env combos
+pytest tests/test_isolation.py         # import-graph: trading/ never imports gemma/
 python -m trading.engine.core --desk swing --simulate
-curl localhost:8000/api/health     # gate_armed must be false
+curl localhost:8000/api/health         # gate_armed must be false
 ```
+
+Cases `test_sentiment_rules.py` must cover — all runnable against Track 1's
+fixtures, no backend needed:
+
+- high `composite_score` + **negative** sentiment ⇒ no entry
+- positive sentiment + `promoter_pledge` driver ⇒ no entry, reason `blocked_event`
+- sentiment `+0.9` conf `1.0` ⇒ full slot; `+0.3` conf `0.5` ⇒ ~57% of a slot
+- held position, sentiment falls `+0.4 → -0.15` ⇒ swing exit `sentiment_reversal`
+- sentiment `as_of` 9h old on the day desk ⇒ no new entry, **position retained**
+- stock already `+5%` today, day desk ⇒ skip, reason `sentiment_already_priced`
 
 The isolation test is short and worth writing early — it's the thing that lets
 you tell a judge "the model provably cannot place an order":
