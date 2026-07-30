@@ -1,114 +1,110 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import { Button, Card, Eyebrow, ProgressBar } from "@/components/ui";
-import { useStore } from "@/lib/store";
-import type { OnboardingAnswers } from "@/types";
 import clsx from "clsx";
+import { Button, Card, ErrorNote, Eyebrow, ProgressBar, rupees } from "@/components/ui";
+import { useStore } from "@/lib/store";
+import { getQuiz } from "@/services/api";
+import { ApiError } from "@/services/api";
+import type { Question, QuizAnswers } from "@/types";
 
-type Step =
-  | { key: keyof OnboardingAnswers; kind: "select"; question: string; options: string[] }
-  | { key: keyof OnboardingAnswers; kind: "slider"; question: string; min: number; max: number; unit: string }
-  | { key: keyof OnboardingAnswers; kind: "textarea"; question: string; placeholder: string };
+// The questions come from GET /api/quiz, not from a const in this file. That is
+// the fix for the integration bug that mattered most: the old build hard-coded
+// its own options ("years+", "multiple times a day") which no backend field
+// accepted, so onboarding could never produce a valid RiskProfile.
 
-const STEPS: Step[] = [
-  {
-    key: "time_horizon",
-    kind: "select",
-    question: "When you open a position, how long do you typically plan to hold it?",
-    options: ["< 1 day", "days to weeks", "months", "years+"],
-  },
-  {
-    key: "experience",
-    kind: "select",
-    question: "How would you describe your trading experience?",
-    options: ["new to this", "some experience", "experienced", "professional"],
-  },
-  {
-    key: "trade_frequency",
-    kind: "select",
-    question: "How often do you place trades?",
-    options: ["multiple times a day", "a few times a week", "monthly", "rarely"],
-  },
-  {
-    key: "capital",
-    kind: "slider",
-    question: "Roughly how much capital are you planning to allocate?",
-    min: 10000,
-    max: 5000000,
-    unit: "₹",
-  },
-  {
-    key: "drawdown_tolerance",
-    kind: "slider",
-    question: "What's the maximum portfolio drawdown you could stomach without panicking?",
-    min: 5,
-    max: 60,
-    unit: "%",
-  },
-  {
-    key: "volatility_comfort",
-    kind: "slider",
-    question: "How comfortable are you with day-to-day price swings?",
-    min: 0,
-    max: 100,
-    unit: "/100",
-  },
-  {
-    key: "primary_goal",
-    kind: "select",
-    question: "What's the main goal for this portfolio?",
-    options: ["grow wealth long-term", "generate income", "active trading profit", "capital preservation"],
-  },
-  {
-    key: "liquidity_need",
-    kind: "select",
-    question: "How soon might you need to access this money?",
-    options: ["not for years", "within a year", "within months", "could need it anytime"],
-  },
-  {
-    key: "sentiment_text",
-    kind: "textarea",
-    question: "How are you feeling about the markets right now?",
-    placeholder: "e.g. Feeling cautious about tech valuations, but bullish on Indian banks this quarter...",
-  },
-];
+function defaultFor(q: Question, answers: QuizAnswers) {
+  const current = answers[q.id];
+  if (current !== undefined) return current;
+  if (q.kind === "slider" || q.kind === "number") return q.min ?? 0;
+  if (q.kind === "boolean") return true;
+  if (q.kind === "multi") return [];
+  return "";
+}
+
+function isAnswered(q: Question, value: unknown): boolean {
+  if (q.required === false) return true;
+  if (q.kind === "multi") return Array.isArray(value) && value.length > 0;
+  if (q.kind === "boolean") return typeof value === "boolean";
+  if (q.kind === "slider" || q.kind === "number") return typeof value === "number";
+  return value !== undefined && value !== "";
+}
+
+function formatSlider(q: Question, value: number): string {
+  if (q.unit === "₹") return rupees(value);
+  return `${value.toLocaleString("en-IN")}${q.unit ?? ""}`;
+}
 
 export default function Onboarding() {
+  const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const [answers, setLocalAnswers] = useState<OnboardingAnswers>({});
-  const [analyzing, setAnalyzing] = useState(false);
-  const { runAnalysis } = useStore();
+  const { answers, setAnswers, submitQuiz, onboarding } = useStore();
   const navigate = useNavigate();
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-  const pct = ((step + 1) / STEPS.length) * 100;
-
-  const value = answers[current.key];
-  const canAdvance =
-    current.kind === "textarea" ? true : value !== undefined && value !== "" && value !== null;
-
-  const update = (v: string | number) => setLocalAnswers((a) => ({ ...a, [current.key]: v }));
-
-  const handleNext = async () => {
-    if (isLast) {
-      setAnalyzing(true);
-      await runAnalysis(answers);
-      navigate("/persona");
-      return;
-    }
-    setStep((s) => s + 1);
+  const load = () => {
+    setLoadError(null);
+    getQuiz()
+      .then((body) => setQuestions(body.questions))
+      .catch((err: unknown) =>
+        setLoadError(err instanceof ApiError ? err.message : String(err)),
+      );
   };
 
-  if (analyzing) {
+  useEffect(load, []);
+
+  const current = questions?.[step];
+  const value = useMemo(
+    () => (current ? defaultFor(current, answers) : undefined),
+    [current, answers],
+  );
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <ErrorNote message={loadError} onRetry={load} />
+      </div>
+    );
+  }
+
+  if (!questions || !current) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center gap-2 text-base-400">
+        <Loader2 className="animate-spin" size={18} /> loading the survey…
+      </div>
+    );
+  }
+
+  const isLast = step === questions.length - 1;
+  const pct = ((step + 1) / questions.length) * 100;
+  const update = (v: QuizAnswers[string]) => setAnswers({ ...answers, [current.id]: v });
+
+  const toggleMulti = (option: string) => {
+    const list = Array.isArray(value) ? [...(value as string[])] : [];
+    const at = list.indexOf(option);
+    if (at >= 0) list.splice(at, 1);
+    else list.push(option);
+    update(list);
+  };
+
+  const next = async () => {
+    if (!isLast) {
+      setStep((s) => s + 1);
+      return;
+    }
+    const result = await submitQuiz(answers);
+    if (result) navigate("/persona");
+  };
+
+  if (onboarding.loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-signal-up" size={28} />
-        <Eyebrow>Analyzing your responses</Eyebrow>
+        <Eyebrow>Scoring your answers</Eyebrow>
         <p className="max-w-sm text-center text-sm text-base-300">
-          Classifying trader profile, scoring market sentiment, and reading your outlook...
+          A hand-written rubric bands your risk, Gemma reads your own words as a
+          second opinion, and the desk split follows from both.
         </p>
       </div>
     );
@@ -119,71 +115,112 @@ export default function Onboarding() {
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between">
           <Eyebrow>
-            Step {step + 1} of {STEPS.length}
+            Step {step + 1} of {questions.length}
           </Eyebrow>
           <span className="font-mono text-xs text-base-400">{Math.round(pct)}%</span>
         </div>
         <ProgressBar pct={pct} />
       </div>
 
+      {onboarding.error && (
+        <div className="mb-4">
+          <ErrorNote message={onboarding.error} onRetry={next} />
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
-          key={step}
+          key={current.id}
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -16 }}
           transition={{ duration: 0.22, ease: "easeOut" }}
         >
           <Card className="p-8">
-            <h2 className="mb-6 font-display text-xl font-semibold leading-snug text-base-50 light:text-base-900">
-              {current.question}
+            <h2 className="font-display text-xl font-semibold leading-snug text-base-50 light:text-base-900">
+              {current.text}
             </h2>
+            {current.help && (
+              <p className="mb-6 mt-2 text-sm leading-relaxed text-base-400">{current.help}</p>
+            )}
+            {!current.help && <div className="mb-6" />}
 
-            {current.kind === "select" && (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {current.options.map((opt) => (
+            {(current.kind === "single" || current.kind === "multi") && (
+              <div className="grid grid-cols-1 gap-2">
+                {current.options?.map((opt) => {
+                  const selected =
+                    current.kind === "multi"
+                      ? Array.isArray(value) && (value as string[]).includes(opt.value)
+                      : value === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() =>
+                        current.kind === "multi" ? toggleMulti(opt.value) : update(opt.value)
+                      }
+                      aria-pressed={selected}
+                      className={clsx(
+                        "rounded-lg border px-4 py-3 text-left text-sm transition-colors",
+                        selected
+                          ? "border-signal-up bg-signal-up/10 text-signal-up"
+                          : "border-base-700 text-base-200 hover:border-base-500",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {current.kind === "boolean" && (
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: true, label: "Yes" },
+                  { v: false, label: "No" },
+                ].map((opt) => (
                   <button
-                    key={opt}
-                    onClick={() => update(opt)}
+                    key={String(opt.v)}
+                    onClick={() => update(opt.v)}
+                    aria-pressed={value === opt.v}
                     className={clsx(
-                      "rounded-lg border px-4 py-3 text-left text-sm transition-colors",
-                      value === opt
+                      "rounded-lg border px-4 py-3 text-sm transition-colors",
+                      value === opt.v
                         ? "border-signal-up bg-signal-up/10 text-signal-up"
-                        : "border-base-700 text-base-200 hover:border-base-500"
+                        : "border-base-700 text-base-200 hover:border-base-500",
                     )}
                   >
-                    {opt}
+                    {opt.label}
                   </button>
                 ))}
               </div>
             )}
 
-            {current.kind === "slider" && (
+            {(current.kind === "slider" || current.kind === "number") && (
               <div>
-                <div className="mb-3 font-mono text-2xl text-signal-up tabular">
-                  {current.unit === "₹" ? "₹" : ""}
-                  {Number(value ?? current.min).toLocaleString("en-IN")}
-                  {current.unit !== "₹" ? current.unit : ""}
+                <div className="mb-3 font-mono text-2xl tabular text-signal-up">
+                  {formatSlider(current, Number(value ?? current.min ?? 0))}
                 </div>
                 <input
                   type="range"
-                  min={current.min}
-                  max={current.max}
-                  step={current.unit === "%" || current.unit === "/100" ? 1 : 1000}
-                  value={Number(value ?? current.min)}
+                  min={current.min ?? 0}
+                  max={current.max ?? 100}
+                  step={current.step ?? 1}
+                  value={Number(value ?? current.min ?? 0)}
                   onChange={(e) => update(Number(e.target.value))}
+                  aria-label={current.text}
                   className="w-full accent-[#ffb648]"
                 />
                 <div className="mt-1 flex justify-between font-mono text-xs text-base-400">
-                  <span>{current.min.toLocaleString("en-IN")}</span>
-                  <span>{current.max.toLocaleString("en-IN")}</span>
+                  <span>{formatSlider(current, current.min ?? 0)}</span>
+                  <span>{formatSlider(current, current.max ?? 0)}</span>
                 </div>
               </div>
             )}
 
-            {current.kind === "textarea" && (
+            {current.kind === "text" && (
               <textarea
-                value={(value as string) ?? ""}
+                value={String(value ?? "")}
                 onChange={(e) => update(e.target.value)}
                 placeholder={current.placeholder}
                 rows={5}
@@ -198,10 +235,15 @@ export default function Onboarding() {
         <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
           <ArrowLeft size={16} /> Back
         </Button>
-        <Button onClick={handleNext} disabled={!canAdvance}>
-          {isLast ? "Analyze my profile" : "Next"} <ArrowRight size={16} />
+        <Button onClick={next} disabled={!isAnswered(current, value)}>
+          {isLast ? "See my profile" : "Next"} <ArrowRight size={16} />
         </Button>
       </div>
+
+      <p className="mt-8 text-center text-xs leading-relaxed text-base-500">
+        Paper trading only. Educational analysis, not investment advice, and not
+        issued by a SEBI-registered Research Analyst or Investment Adviser.
+      </p>
     </div>
   );
 }

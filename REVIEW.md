@@ -102,8 +102,10 @@ states.
   script rather than shipping a command that always fails.
 - **`tsconfig.tsbuildinfo` was committed.** Build artifact; now gitignored.
 - **Track 3's `RebalanceEvent.feedback` was UI-only state** — thumbs up/down
-  vanished on reload. Now written to the append-only journal, which is where
-  auditable events belong.
+  vanished on reload, and there was no endpoint to persist it. I dropped the
+  control rather than ship a button that pretends to record something. If it
+  comes back, it belongs in the journal as its own entry kind, which is a backend
+  change first.
 
 ## Not changed, deliberately
 

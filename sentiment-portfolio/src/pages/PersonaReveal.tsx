@@ -1,99 +1,227 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TrendingUp, Zap, Layers, Infinity as InfinityIcon, ArrowRight } from "lucide-react";
-import { Button, Card, Eyebrow } from "@/components/ui";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorNote,
+  Eyebrow,
+  Spinner,
+  Stat,
+  rupees,
+} from "@/components/ui";
 import { useStore } from "@/lib/store";
-import type { TraderType } from "@/types";
+import { DESK_LABEL, type Horizon } from "@/types";
 
-const META: Record<TraderType, { label: string; desc: string; icon: JSX.Element }> = {
-  long_term: {
-    label: "Long-Term Investor",
-    desc: "You hold through cycles, favoring compounding over timing the market.",
-    icon: <InfinityIcon size={28} />,
-  },
-  swing: {
-    label: "Swing Trader",
-    desc: "You ride multi-day to multi-week moves, balancing conviction with patience.",
-    icon: <TrendingUp size={28} />,
-  },
-  intraday: {
-    label: "Intraday Trader",
-    desc: "You trade the day's volatility, closing positions before the bell.",
-    icon: <Zap size={28} />,
-  },
-  hybrid: {
-    label: "Hybrid Allocator",
-    desc: "You split conviction between a core long-term book and tactical trades.",
-    icon: <Layers size={28} />,
-  },
+const DESK_COLOR: Record<Horizon, string> = {
+  day: "#ff5470",
+  swing: "#ffb648",
+  long_term: "#8b98a3",
 };
 
+const BAND_COPY = {
+  conservative: "Capital preservation first. The intraday desk gets the smallest slice.",
+  balanced: "A working mix: swing carries the most, intraday stays contained.",
+  aggressive: "Intraday and swing carry the weight, with long-term as ballast.",
+} as const;
+
 export default function PersonaReveal() {
-  const { persona } = useStore();
+  const { quiz, report, loadReport, onboarding, answers } = useStore();
   const navigate = useNavigate();
 
-  if (!persona) {
-    navigate("/");
-    return null;
-  }
+  useEffect(() => {
+    if (!quiz) navigate("/", { replace: true });
+  }, [quiz, navigate]);
 
-  const meta = META[persona.trader_type];
-  const angle = persona.risk_tolerance * 180 - 90; // -90 to 90 deg
+  useEffect(() => {
+    if (quiz && report === null) void loadReport();
+    // Intentionally not depending on loadReport's identity churn: one fetch per
+    // arrival on this screen is the behaviour we want.
+  }, [quiz]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!quiz) return null;
+
+  const account = quiz.account;
+  const pcts = Object.entries(quiz.allocation_pct) as Array<[Horizon, number]>;
+  const rupeesByDesk = account?.allocation_rupees ?? {};
+  const pieData = pcts.map(([desk, pct]) => ({
+    name: DESK_LABEL[desk],
+    value: pct,
+    key: desk,
+  }));
+  const gemma = quiz.gemma;
+  const hasText = Boolean(answers.open_outlook || answers.open_goal);
 
   return (
-    <div className="mx-auto max-w-lg">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <Card className="p-8 text-center">
-          <Eyebrow>Your trader profile</Eyebrow>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="mx-auto w-full max-w-4xl"
+    >
+      <Eyebrow>Your profile</Eyebrow>
+      <h1 className="mt-1 font-display text-3xl font-semibold capitalize text-base-50 light:text-base-900">
+        {quiz.risk_band}
+      </h1>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-300">
+        {BAND_COPY[quiz.risk_band]} Scored {quiz.rubric_score}/11 by a
+        hand-written rubric over your own answers — not by a model.
+      </p>
 
-          <div className="my-6 flex flex-col items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-signal-up/10 text-signal-up">
-              {meta.icon}
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <Card className="p-6 lg:col-span-2">
+          <Eyebrow>Capital split</Eyebrow>
+          <div className="relative mx-auto mt-2 h-56 w-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={62}
+                  outerRadius={92}
+                  paddingAngle={3}
+                  stroke="none"
+                >
+                  {pieData.map((d) => (
+                    <Cell key={d.key} fill={DESK_COLOR[d.key]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: number) => `${v.toFixed(1)}%`}
+                  contentStyle={{
+                    background: "#161c23",
+                    border: "1px solid #2b3540",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontFamily: "IBM Plex Mono, monospace",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-base-400">
+                capital
+              </span>
+              <span className="font-mono text-sm text-base-50 light:text-base-900">
+                {rupees(quiz.profile.capital)}
+              </span>
             </div>
-            <h1 className="font-display text-2xl font-semibold text-base-50 light:text-base-900">{meta.label}</h1>
-            <p className="max-w-xs text-sm text-base-300">{meta.desc}</p>
           </div>
 
-          <div className="mx-auto mb-2 w-48">
-            <svg viewBox="0 0 200 110" className="w-full">
-              <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="currentColor" className="text-base-700" strokeWidth="10" strokeLinecap="round" />
-              <path
-                d="M 10 100 A 90 90 0 0 1 190 100"
-                fill="none"
-                stroke="#ffb648"
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeDasharray={`${persona.risk_tolerance * 283} 283`}
-              />
-              <g transform={`rotate(${angle} 100 100)`}>
-                <line x1="100" y1="100" x2="100" y2="25" stroke="currentColor" className="text-base-100" strokeWidth="3" strokeLinecap="round" />
-              </g>
-              <circle cx="100" cy="100" r="5" fill="currentColor" className="text-base-100" />
-            </svg>
-            <div className="-mt-2 font-mono text-xs text-base-400">
-              Risk tolerance · <span className="text-signal-up">{(persona.risk_tolerance * 100).toFixed(0)}/100</span>
-            </div>
-          </div>
-
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-base-800 px-3 py-1 light:bg-base-100">
-            <span className="font-mono text-xs text-base-300">
-              Confidence {(persona.confidence * 100).toFixed(0)}%
-            </span>
-          </div>
-          {persona.confidence < 0.65 && (
-            <p className="mx-auto mt-3 max-w-xs text-xs text-base-400">
-              This is a best estimate based on a few mixed signals in your answers — you can fine-tune it any time
-              from the dashboard.
-            </p>
-          )}
-
-          <div className="mt-8">
-            <Button className="w-full" onClick={() => navigate("/dashboard")}>
-              View my portfolio <ArrowRight size={16} />
-            </Button>
+          <div className="mt-4 space-y-2">
+            {pcts.map(([desk, pct]) => (
+              <div key={desk} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-base-200 light:text-base-700">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: DESK_COLOR[desk] }}
+                  />
+                  {DESK_LABEL[desk]}
+                </span>
+                <span className="font-mono tabular text-base-100 light:text-base-800">
+                  {pct.toFixed(1)}%
+                  {rupeesByDesk[desk] !== undefined && (
+                    <span className="ml-2 text-base-400">
+                      {rupees(rupeesByDesk[desk] as number)}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {account?.desks_off?.map((desk) => (
+              <div key={desk} className="flex items-center justify-between text-sm">
+                <span className="text-base-500 line-through">
+                  {DESK_LABEL[desk as Horizon] ?? desk}
+                </span>
+                <Badge>off — you opted out</Badge>
+              </div>
+            ))}
           </div>
         </Card>
-      </motion.div>
-    </div>
+
+        <div className="space-y-6 lg:col-span-3">
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <Eyebrow>What Gemma read</Eyebrow>
+              <Badge tone={gemma.moved_band ? "warn" : "neutral"}>
+                {gemma.moved_band ? "moved the band one notch" : "band unchanged"}
+              </Badge>
+            </div>
+
+            {hasText ? (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <Stat
+                    label="Reads you as"
+                    value={gemma.trader_type ? DESK_LABEL[gemma.trader_type] : "no read"}
+                  />
+                  <Stat label="Confidence" value={`${Math.round(gemma.confidence * 100)}%`} />
+                  <Stat
+                    label="Rubric"
+                    value={`${gemma.rubric_score}/11`}
+                    sub={gemma.rubric_band}
+                  />
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-base-300">{gemma.reasoning}</p>
+              </>
+            ) : (
+              <p className="text-sm leading-relaxed text-base-300">
+                You skipped the free-text questions, so the model had nothing to
+                read and the rubric stands alone.
+              </p>
+            )}
+
+            <p className="mt-4 border-t border-base-800 pt-3 text-xs leading-relaxed text-base-500">
+              A model never sets an allocation here. Its read can shift your band
+              by one notch, and only above 70% confidence — everything else is
+              deterministic Python.
+            </p>
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Sparkles size={14} className="text-signal-up" />
+              <Eyebrow>Your personality note</Eyebrow>
+            </div>
+            {report === null && !onboarding.error && <Spinner label="writing…" />}
+            {onboarding.error && report === null && (
+              <ErrorNote message={onboarding.error} onRetry={loadReport} />
+            )}
+            {report && (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-base-200 light:text-base-700">
+                {report}
+              </p>
+            )}
+          </Card>
+
+          {account?.sip && account.sip.amount > 0 && (
+            <Card className="p-6">
+              <Eyebrow>Your SIP</Eyebrow>
+              <div className="mt-2 flex items-baseline gap-3">
+                <span className="font-mono text-xl text-base-50 light:text-base-900">
+                  {rupees(account.sip.amount)}
+                </span>
+                <span className="text-sm text-base-400">{account.sip.frequency}</span>
+                <Badge>→ {account.sip.target_desk}</Badge>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-base-500">{account.sip.note}</p>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <span className="font-mono text-xs text-base-500">
+          model: {quiz.model.backend} · {quiz.model.model}
+        </span>
+        <Button onClick={() => navigate("/dashboard")}>
+          Open the trading floor <ArrowRight size={16} />
+        </Button>
+      </div>
+    </motion.div>
   );
 }

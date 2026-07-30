@@ -1,6 +1,22 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import type { VerdictLevel } from "@/types";
+
+/** ₹ with Indian digit grouping. Every rupee figure on screen goes through here. */
+export function rupees(value: number, decimals = 0): string {
+  return `₹${value.toLocaleString("en-IN", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+}
+
+/** ₹1,23,45,678 -> ₹1.23 Cr. Used where the exact paise are noise. */
+export function crore(valueInCrore: number): string {
+  if (valueInCrore >= 1_00_000) return `₹${(valueInCrore / 1_00_000).toFixed(2)} L Cr`;
+  return `₹${valueInCrore.toLocaleString("en-IN", { maximumFractionDigits: 0 })} Cr`;
+}
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -106,6 +122,111 @@ export function SentimentBar({ value }: { value: number }) {
           left: isPos ? "50%" : `${50 - pct}%`,
         }}
       />
+    </div>
+  );
+}
+
+export function Badge({
+  children,
+  tone = "neutral",
+  title,
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "up" | "down" | "warn";
+  title?: string;
+}) {
+  return (
+    <span
+      title={title}
+      className={clsx(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider",
+        tone === "up" && "bg-signal-up/10 text-signal-up",
+        tone === "down" && "bg-signal-down/10 text-signal-down",
+        tone === "warn" && "bg-signal-up/10 text-signal-up",
+        tone === "neutral" && "bg-base-800 text-base-300 light:bg-base-100 light:text-base-500",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+const VERDICT_COPY: Record<VerdictLevel, { label: string; tone: "up" | "down" | "warn" }> = {
+  SUITABLE: { label: "suitable", tone: "up" },
+  STRETCH: { label: "stretch", tone: "warn" },
+  OUTSIDE_MANDATE: { label: "refused", tone: "down" },
+};
+
+export function VerdictPill({ level }: { level: VerdictLevel }) {
+  const { label, tone } = VERDICT_COPY[level];
+  return <Badge tone={tone}>{label}</Badge>;
+}
+
+/** A failure with its cause visible. The old build showed a spinner forever. */
+export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-signal-down/40 bg-signal-down/5 p-4">
+      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-signal-down" />
+      <div className="min-w-0">
+        <div className="font-mono text-xs uppercase tracking-wider text-signal-down">
+          Request failed
+        </div>
+        <p className="mt-1 break-words text-sm text-base-200 light:text-base-700">{message}</p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-2 font-mono text-xs text-signal-up underline decoration-dotted"
+          >
+            retry
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Spinner({ label }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-base-400">
+      <Loader2 size={14} className="animate-spin" />
+      {label}
+    </div>
+  );
+}
+
+export function Empty({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-dashed border-base-700 p-6 text-center text-sm text-base-400">
+      {children}
+    </div>
+  );
+}
+
+export function Stat({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: "up" | "down";
+}) {
+  return (
+    <div>
+      <Eyebrow>{label}</Eyebrow>
+      <div
+        className={clsx(
+          "mt-1 font-mono text-xl tabular",
+          tone === "up" && "text-signal-up",
+          tone === "down" && "text-signal-down",
+          !tone && "text-base-50 light:text-base-900",
+        )}
+      >
+        {value}
+      </div>
+      {sub && <div className="mt-0.5 text-xs text-base-400">{sub}</div>}
     </div>
   );
 }
