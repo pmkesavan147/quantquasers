@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-base-950 text-base-100 font-body antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+html.light body {
+  @apply bg-wash text-base-900;
+}
+
+::selection {
+  background: rgba(255, 182, 72, 0.25);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #ffb648;
+  outline-offset: 2px;
+}
+
+/* thin scrollbar for terminal feel */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2b3540; border-radius: 4px; }
+html.light ::-webkit-scrollbar-thumb { background: #c2ccd3; }
