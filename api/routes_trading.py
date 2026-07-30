@@ -19,6 +19,7 @@ from trading.allocation import explain, risk_band
 from trading.desks import propose_entries, propose_exits
 from trading.execution.gate import gate_armed, resolve_mode
 from trading.execution.kite import kite_status
+from trading.journal import backend_name
 from trading.models import DeskState, Fill, PortfolioState, ProposedOrder
 
 router = APIRouter(prefix="/api", tags=["trading"])
@@ -230,8 +231,15 @@ def health() -> dict:
     eng = engine()
     mode, reasons = resolve_mode()
     p = current_profile()
+    from ingest import snapshot
+
     return {
         "db": True,
+        # Which store this instance writes to, and whether its market data
+        # is live or a committed snapshot. Both are invisible from the UI
+        # otherwise, and both change what the numbers mean.
+        "journal": backend_name(),
+        "data": snapshot.summary(),
         "account_configured": p is not None,
         "capital": eng.limits.max_capital,
         "risk_band": risk_band(p) if p else None,

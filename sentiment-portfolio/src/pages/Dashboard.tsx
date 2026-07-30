@@ -214,8 +214,11 @@ export default function Dashboard() {
             ))}
             <p className="pt-2 text-xs leading-relaxed text-base-500">
               Quant numbers:{" "}
-              {active.report.quant_source.live} live ·{" "}
-              {active.report.quant_source.fixture} from fixtures. Headlines:{" "}
+              {Object.entries(active.report.quant_source)
+                .filter(([, v]) => v > 0)
+                .map(([k, v]) => `${v} ${k}`)
+                .join(", ") || "none"}
+              . Headlines:{" "}
               {Object.entries(active.report.headline_source)
                 .map(([k, v]) => `${v} ${k}`)
                 .join(", ") || "none"}

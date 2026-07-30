@@ -27,6 +27,7 @@ from core.contracts import (
     SymbolSentiment,
 )
 from gemma.scorers import explain_candidate, score_headline
+from ingest import snapshot
 from ingest.news import Headline, headlines_for, source_mix
 from selection import quant as quant_mod
 from selection.mandate import evaluate
@@ -98,10 +99,15 @@ def score_symbol(
 def quant_for(
     symbol: str, *, allow_network: bool = True
 ) -> tuple[QuantMetrics | None, str]:
-    """`(metrics, provenance)` where provenance is 'live' | 'fixture' | 'none'."""
+    """`(metrics, provenance)`: 'live' | 'snapshot' | 'fixture' | 'none'.
+
+    A deployed instance serves metrics computed from real prices, but computed
+    *earlier* — calling that "live" would be the exact dishonesty this field
+    exists to prevent.
+    """
     live = quant_mod.fetch(symbol, allow_network=allow_network)
     if live is not None:
-        return live, "live"
+        return live, "snapshot" if snapshot.enabled() else "live"
     fixture = fixture_quant().get(symbol.upper())
     if fixture is not None:
         return fixture, "fixture"
@@ -127,7 +133,7 @@ def build_candidates(
     symbols = [s.upper() for s in (symbols or list(universe())[:DEFAULT_UNIVERSE_LIMIT])]
 
     candidates: list[Candidate] = []
-    provenance = {"live": 0, "fixture": 0, "none": 0}
+    provenance = {"live": 0, "snapshot": 0, "fixture": 0, "none": 0}
     headline_origins: dict[str, int] = {}
     models: dict[str, int] = {}
     sentiments: list[SymbolSentiment] = []

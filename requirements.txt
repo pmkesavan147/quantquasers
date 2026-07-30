@@ -1,19 +1,15 @@
+# Runtime — what a deployed instance actually imports.
+#
+# Kept lean on purpose: Vercel's function size limit is 250 MB unzipped, and
+# yfinance/pyarrow/kiteconnect are only needed when *collecting* data, which a
+# serverless instance never does (it serves data/snapshot/). For local
+# development, install requirements-dev.txt instead — it includes this file.
 fastapi
 uvicorn[standard]
 pydantic
 python-dotenv
 pyyaml
-pytest
-httpx
-
-# Track 2 — trading
-kiteconnect
-
-# Track 1 — sentiment/selection (listed so one venv serves the whole repo)
-google-genai          # Gemma 4 via Google AI Studio — the default backend
-ollama                # optional local backend, used only if the daemon answers
-yfinance
-pandas
+httpx                 # API client, and the Supabase journal talks over HTTP
+pandas                # quant metrics
 numpy
-pyarrow               # parquet price cache
-feedparser
+google-genai          # Gemma 4 via Google AI Studio — the default backend

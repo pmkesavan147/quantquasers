@@ -16,7 +16,26 @@ from pathlib import Path
 from trading.models import JournalEntry
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_DB = Path(os.getenv("JOURNAL_DB") or ROOT / "quantquasers.sqlite3")
+
+
+def _default_db() -> Path:
+    """Where the SQLite ledger lives.
+
+    On Vercel the deployment directory is read-only and only /tmp is writable,
+    so a repo-relative path there fails on the first write — with a 500 that
+    looks like a code bug rather than a missing database. /tmp is wiped between
+    invocations, which is exactly why a deployed instance should be configured
+    with Supabase instead; this only keeps it from crashing if it is not.
+    """
+    override = os.getenv("JOURNAL_DB")
+    if override:
+        return Path(override)
+    if os.getenv("VERCEL"):
+        return Path("/tmp/quantquasers.sqlite3")
+    return ROOT / "quantquasers.sqlite3"
+
+
+DEFAULT_DB = _default_db()
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS journal (

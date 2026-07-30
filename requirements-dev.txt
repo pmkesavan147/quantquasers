@@ -1,0 +1,15 @@
+# Everything the runtime needs, plus what it takes to collect data and test.
+# This is the file to install on a laptop:  pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest
+
+# Data collection — used by scripts/build_snapshot.py, warm_cache.py and by
+# live (non-snapshot) local runs. A deployed instance never calls these.
+yfinance
+pyarrow               # parquet price cache
+feedparser            # Google News RSS
+
+# Optional backends
+kiteconnect           # real quotes; order routing stays behind the live gate
+ollama                # local Gemma, used only if the daemon answers

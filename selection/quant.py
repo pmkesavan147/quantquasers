@@ -17,6 +17,7 @@ from datetime import datetime
 import pandas as pd
 
 from core.contracts import QuantMetrics
+from ingest import snapshot
 from ingest.prices import INDEX_SYMBOL, history
 from selection.universe import row as universe_row
 
@@ -159,6 +160,19 @@ def fetch(symbol: str, *, allow_network: bool = True) -> QuantMetrics | None:
     None is a real answer: it means the pipeline should fall back to committed
     fixture metrics rather than invent numbers for a symbol Yahoo cannot price.
     """
+    # A deployed instance has seconds, not minutes: computing a year of metrics
+    # for 40 symbols from yfinance is not a thing that finishes inside a
+    # serverless request. It reads the committed snapshot, which was computed
+    # from exactly this code on a machine that could take its time.
+    if snapshot.enabled():
+        row = snapshot.quant_metrics().get(symbol.upper())
+        if row:
+            try:
+                return QuantMetrics.model_validate(row)
+            except Exception:
+                pass  # a malformed snapshot must not beat a live fetch
+        return None
+
     df = history(symbol, allow_network=allow_network)
     if df.empty or len(df) < 25:
         return None

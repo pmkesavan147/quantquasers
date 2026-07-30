@@ -30,7 +30,7 @@ from trading.desks import Skip, open_positions, propose_entries, propose_exits
 from trading.execution.broker import InsufficientFunds, NotFilled
 from trading.execution.gate import build_broker, resolve_mode
 from trading.execution.quotes import MockQuoteSource, QuoteSource
-from trading.journal.store import Journal
+from trading.journal import Journal, open_journal
 from trading.models import DeskState, Fill, PortfolioState, Position, ProposedOrder
 from trading.risk.manager import PortfolioState as RiskState
 from trading.risk.manager import RiskManager
@@ -66,7 +66,10 @@ class Engine:
         profile: RiskProfile | None = None,
     ):
         self.quotes = quotes
-        self.journal = journal or Journal()
+        # open_journal() picks Postgres on a serverless deployment and SQLite on a
+        # machine with a filesystem. Passing one in still wins, which is how
+        # tests keep their journal in a tmp file.
+        self.journal = journal or open_journal()
         self.limits = limits or RiskLimits.load()
         self.profile = profile
         self.desks = desks or load_desks()
@@ -349,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no candidates found in {args.fixtures}/ — Track 1 owes you fixtures")
         return 1
 
-    journal = Journal(args.db) if args.db else Journal()
+    journal = open_journal(args.db)
     engine = Engine(MockQuoteSource(_base_prices(cands)), journal=journal)
 
     print(f"mode={engine.mode}  gate_armed={engine.mode == 'live'}")

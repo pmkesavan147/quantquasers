@@ -157,7 +157,7 @@ def test_candidates_are_ranked_and_carry_their_provenance(client):
                   if c["verdict"]["level"] == tier]
         assert scores == sorted(scores, reverse=True), tier
 
-    assert set(body["report"]["quant_source"]) == {"live", "fixture", "none"}
+    assert {"live", "snapshot", "fixture", "none"} == set(body["report"]["quant_source"])
 
 
 def test_refusals_are_returned_with_their_numbers_never_filtered(client):

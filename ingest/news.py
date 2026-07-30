@@ -24,6 +24,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from ingest import snapshot
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 CACHE_DIR = Path(os.getenv("NEWS_CACHE_DIR", DATA / "cache" / "news"))
@@ -45,7 +47,7 @@ class Headline(BaseModel):
     source: str
     url: str
     published_at: datetime
-    origin: str = "rss"        # rss | cache | fixture
+    origin: str = "rss"        # rss | cache | snapshot | fixture
 
 
 def _hid(symbol: str, title: str) -> str:
@@ -177,6 +179,14 @@ def headlines_for(
 ) -> list[Headline]:
     """Newest first, at most `MAX_PER_SYMBOL`."""
     symbol = symbol.upper()
+
+    # A deployed instance has no disk cache and no time to fetch, so it reads
+    # the committed snapshot of real headlines first. Tagged origin="snapshot",
+    # never "rss" — the UI says which it got.
+    if snapshot.enabled():
+        rows = snapshot.news_for(symbol, now)
+        if rows:
+            return [Headline.model_validate(row) for row in rows][:MAX_PER_SYMBOL]
 
     if _cache_fresh(symbol):
         cached = _read_cache(symbol)

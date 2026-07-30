@@ -203,7 +203,9 @@ export type PipelineReport = {
   suitable: number;
   stretch: number;
   refused: number;
-  quant_source: { live: number; fixture: number; none: number };
+  // live | snapshot | fixture | none — a deployed instance serves real
+  // numbers captured earlier, and says so rather than calling them live.
+  quant_source: Record<string, number>;
   headline_source: Record<string, number>;
   headline_models: Record<string, number>;
   market_mood: MarketMood;
