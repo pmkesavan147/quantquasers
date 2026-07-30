@@ -26,8 +26,9 @@ FULL_ANSWERS = {
     "uses_leverage": False,
     "sip_amount": 5_000,
     "sip_frequency": "monthly",
-    "open_outlook": "Cautiously long banks",
-    "open_goal": "Beat FD returns",
+    "open_reaction": "I held on and bought a little more the following month",
+    "open_rhythm": "I check on weekends and act only on results",
+    "open_goal": "Beat FD returns over three years",
 }
 
 

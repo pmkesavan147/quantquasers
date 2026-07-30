@@ -134,60 +134,89 @@ def test_the_published_timestamp_is_preserved():
 
 
 # ── profiling and prose degrade, never crash ──────────────────────────────
+BEHAVIOUR_Q = "Think of the last time something you held dropped hard. What did you actually do?"
+GOAL_Q = "What would make you say this worked — and by when?"
+
+LONG_ANSWERS = {
+    BEHAVIOUR_Q: "I added more over the next two months and did not sell anything",
+    GOAL_Q: "beating my FD over three years without watching a screen",
+}
+
+
 def test_no_free_text_means_no_second_opinion():
     horizon, confidence, why = scorers.profile_user(
-        rubric_score=5, rubric_band="balanced", mcq={}, outlook="", goal=""
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text={}
     )
     assert horizon is None
     assert confidence == 0.0
     assert "rubric" in why.lower()
 
 
+def test_a_one_word_answer_is_treated_as_no_signal():
+    """A model handed nine words still answers confidently, and that confidence
+    is what moves someone's risk band."""
+    horizon, confidence, why = scorers.profile_user(
+        rubric_score=5, rubric_band="balanced", mcq={},
+        free_text={BEHAVIOUR_Q: "sold"},
+    )
+    assert horizon is None
+    assert confidence == 0.0
+    assert "too little" in why.lower()
+
+
 def test_an_unreachable_model_yields_no_horizon_and_zero_confidence():
     horizon, confidence, _ = scorers.profile_user(
         rubric_score=5, rubric_band="balanced", mcq={},
-        outlook="I trade every morning before work", goal="quick gains",
+        free_text={BEHAVIOUR_Q: "I sold everything the same morning and stayed out for months"},
     )
     assert horizon is None
     assert confidence == 0.0
 
 
-def test_a_parsed_model_answer_is_returned_from_cache(monkeypatch):
+def test_the_prompt_labels_each_answer_with_its_question():
+    """Unlabelled answers lose the distinction between what someone DID and
+    what they WANT, which is most of the signal."""
+    block, chars = scorers._format_free_text(LONG_ANSWERS)
+    assert BEHAVIOUR_Q in block
+    assert GOAL_Q in block
+    assert chars > scorers.MIN_FREE_TEXT_CHARS
+
+
+def test_a_parsed_model_answer_is_returned_from_cache():
     """The cache is the only way to exercise the parse path with no backend."""
     from gemma.scorers import PROFILE_PROMPT, PROFILER_SYSTEM
 
+    block, _ = scorers._format_free_text(LONG_ANSWERS)
     prompt = PROFILE_PROMPT.format(
-        rubric_score=5, rubric_band="balanced", mcq={},
-        outlook="I hold for years", goal="retirement",
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text=block,
     )
     client.cache_put(
         PROFILER_SYSTEM, prompt, 0.0, "gemma-4-26b-a4b-it",
         '{"trader_type": "long_term", "confidence": 0.82, '
-        '"reasoning": "They said they hold for years."}',
+        '"reasoning": "They added over two months and sold nothing."}',
     )
     horizon, confidence, why = scorers.profile_user(
-        rubric_score=5, rubric_band="balanced", mcq={},
-        outlook="I hold for years", goal="retirement",
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text=LONG_ANSWERS,
     )
     assert horizon == Horizon.LONG
     assert confidence == 0.82
-    assert "years" in why
+    assert "months" in why
 
 
 def test_a_nonsense_trader_type_is_rejected_not_coerced():
     from gemma.scorers import PROFILE_PROMPT, PROFILER_SYSTEM
 
+    answers = {BEHAVIOUR_Q: "I scalp the open every single day and never hold overnight"}
+    block, _ = scorers._format_free_text(answers)
     prompt = PROFILE_PROMPT.format(
-        rubric_score=5, rubric_band="balanced", mcq={},
-        outlook="scalping", goal="x",
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text=block,
     )
     client.cache_put(
         PROFILER_SYSTEM, prompt, 0.0, "gemma-4-26b-a4b-it",
         '{"trader_type": "intraday", "confidence": 0.95, "reasoning": "r"}',
     )
     horizon, confidence, _ = scorers.profile_user(
-        rubric_score=5, rubric_band="balanced", mcq={},
-        outlook="scalping", goal="x",
+        rubric_score=5, rubric_band="balanced", mcq={}, free_text=answers,
     )
     # "intraday" is Track 1's old vocabulary and is not a Horizon.
     assert horizon is None

@@ -52,8 +52,13 @@ def main() -> int:
         rubric_score=6,
         rubric_band="balanced",
         mcq={"horizons": ["swing", "long_term"], "day_trading": False},
-        outlook="I buy on dips and hold for a couple of years, I don't watch screens",
-        goal="retire early without stressing about daily moves",
+        free_text={
+            "Think of the last time something you held dropped hard. What did "
+            "you actually do?":
+                "I bought more over the following month and never sold any of it",
+            "What would make you say this worked — and by when?":
+                "beating my FD over three or four years without watching screens",
+        },
     )
     print("\nsurvey read:")
     print(f"  trader type: {horizon.value if horizon else 'no read'}")

@@ -53,7 +53,9 @@ export default function PersonaReveal() {
     key: desk,
   }));
   const gemma = quiz.gemma;
-  const hasText = Boolean(answers.open_outlook || answers.open_goal);
+  const hasText = ["open_reaction", "open_rhythm", "open_goal"].some(
+    (id) => String(answers[id] ?? "").trim().length > 0,
+  );
 
   return (
     <motion.div

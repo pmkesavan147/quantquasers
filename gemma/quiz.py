@@ -138,25 +138,50 @@ QUESTIONS: list[Question] = [
         ]),
         required=False,
     ),
+    # ── the written questions ────────────────────────────────────────────
+    # These three are the only input a model sees, so they are written to
+    # elicit evidence rather than opinion. "How do you feel about the market?"
+    # — the question this replaced — produced market predictions we do not use
+    # and told us nothing about the person. What predicts behaviour is what
+    # someone did last time, and how much attention they actually have.
     Question(
-        id="open_outlook",
-        text="In your own words: how do you feel about the markets right now, "
-             "and why?",
+        id="open_reaction",
+        text="Think of the last time something you held dropped hard. What did "
+             "you actually do?",
         kind="text",
         required=False,
-        placeholder="e.g. Cautious on IT after the last two quarters, but I "
-                    "keep buying banks on every dip...",
-        help="Read by Gemma. It can shift your risk band by one notch at most.",
+        placeholder="e.g. I sold half the next morning and regretted it, or: I "
+                    "didn't open the app for a week, or: I've never held "
+                    "through a fall like that.",
+        help="What you did last time, not what you would like to do next time. "
+             "This answer carries the most weight.",
+    ),
+    Question(
+        id="open_rhythm",
+        text="Realistically, when in your week would you look at this — and "
+             "what would make you act?",
+        kind="text",
+        required=False,
+        placeholder="e.g. I check between meetings but I can't watch a screen; "
+                    "I'd only act on results or a big fall.",
+        help="Attention is the constraint most people underestimate. Intraday "
+             "needs hours; long-term needs almost none.",
     ),
     Question(
         id="open_goal",
-        text="In your own words: what does a good outcome with this money look "
-             "like?",
+        text="What would make you say this worked — and by when?",
         kind="text",
         required=False,
-        placeholder="e.g. Beat my FD returns without watching a screen all day.",
+        placeholder="e.g. Beating my FD by a few points over three years, "
+                    "without losing sleep.",
+        help="A number and a date, if you have one. 'By when' tells us more "
+             "than 'how much'.",
     ),
 ]
+
+# Answers to these are the only text Gemma ever reads about the user. Ordered
+# by how much the profiler weighs them.
+FREE_TEXT_IDS = ("open_reaction", "open_rhythm", "open_goal")
 
 QUESTION_BY_ID = {q.id: q for q in QUESTIONS}
 
@@ -256,8 +281,7 @@ def to_profile(answers: dict, *, use_gemma: bool = True) -> tuple[RiskProfile, d
             rubric_score=score,
             rubric_band=band_before,
             mcq=mcq,
-            outlook=str(answers.get("open_outlook") or ""),
-            goal=str(answers.get("open_goal") or ""),
+            free_text=free_text_from(answers),
         )
         if trader_type is not None:
             profile = profile.model_copy(
@@ -275,12 +299,26 @@ def to_profile(answers: dict, *, use_gemma: bool = True) -> tuple[RiskProfile, d
     return profile, gemma_read
 
 
+def free_text_from(answers: dict) -> dict[str, str]:
+    """`{question text: answer}` for the written questions that were answered.
+
+    Keyed by the question rather than the field id so the model knows which
+    answer describes past behaviour and which describes intent — that
+    distinction is most of the signal.
+    """
+    out: dict[str, str] = {}
+    for qid in FREE_TEXT_IDS:
+        answer = str(answers.get(qid) or "").strip()
+        if answer:
+            out[QUESTION_BY_ID[qid].text] = answer
+    return out
+
+
 def report_for(profile: RiskProfile, answers: dict) -> str:
     return personality_report(
         band=risk_band(profile),
         rubric_score=rubric_score(profile),
-        outlook=str(answers.get("open_outlook") or ""),
-        goal=str(answers.get("open_goal") or ""),
+        free_text=free_text_from(answers),
     )
 
 

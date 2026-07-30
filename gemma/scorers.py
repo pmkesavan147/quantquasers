@@ -157,7 +157,9 @@ def score_headline(
 PROFILER_SYSTEM = (
     "You read an investor's own words and name their trading horizon. You are a "
     "second opinion: a hand-written rubric has already scored them, and it wins "
-    "any disagreement. Never recommend allocations, products or trades."
+    "any disagreement. Weigh what they say they DID over what they say they "
+    "intend, and weigh how much time they actually have over how much they "
+    "enjoy markets. Never recommend allocations, products or trades."
 )
 
 
@@ -174,15 +176,44 @@ aggressive.
 Structured answers: {mcq}
 
 Their own words —
-On the market right now: "{outlook}"
-On what success looks like: "{goal}"
+{free_text}
+
+Read for three things, in this order of weight:
+1. What they actually DID the last time a position moved against them.
+2. How much time and attention they realistically have in a week.
+3. What they say they want, and by when.
+
+Someone who sold in a panic is long_term regardless of what they say they want.
+Someone who checks prices hourly and cannot hold overnight is day. Someone who
+adds on dips over months is long_term. Swing is the middle: they act on a view
+over days or weeks but do not sit on a screen.
 
 trader_type  one of: day, swing, long_term
 confidence   0.0 to 1.0 — how strongly THEIR WORDS support that horizon.
-             Use below 0.7 if their words are vague, empty, or contradict the
-             rubric band above.
+             Below 0.7 if the answers are short, vague, hypothetical, or if
+             their stated intent contradicts their described behaviour.
+             Above 0.7 only when they describe something they actually did.
 reasoning    one sentence, quoting their words
 """
+
+# Below this much free text there is nothing to read, so we do not ask. A model
+# handed nine words will still answer confidently, and that confidence is the
+# thing that moves someone's risk band.
+MIN_FREE_TEXT_CHARS = 40
+
+
+def _format_free_text(free_text: dict[str, str]) -> tuple[str, int]:
+    """`(prompt block, characters of real content)`.
+
+    Each answer is labelled with the question that produced it, so the model
+    knows which one describes behaviour and which one describes intent.
+    """
+    lines, chars = [], 0
+    for question, answer in free_text.items():
+        clean = (answer or "").strip()
+        chars += len(clean)
+        lines.append(f'Q: {question}\nA: "{clean[:600] or "(not answered)"}"')
+    return "\n\n".join(lines), chars
 
 
 def profile_user(
@@ -190,26 +221,35 @@ def profile_user(
     rubric_score: int,
     rubric_band: str,
     mcq: dict,
-    outlook: str = "",
-    goal: str = "",
+    free_text: dict[str, str] | None = None,
 ) -> tuple[Horizon | None, float, str]:
     """Gemma's read of the free text: `(trader_type, confidence, reasoning)`.
+
+    `free_text` maps the question asked to the answer given — the question text
+    matters, because "what did you do" and "what do you want" are read very
+    differently and an unlabelled blob loses that.
 
     Advisory by contract. `trading.allocation.risk_band()` moves the band by at
     most one notch and only above a 0.70 confidence floor, so a confident wrong
     answer here cannot rewrite someone's portfolio.
 
-    Returns `(None, 0.0, ...)` when there is nothing to read — no free text
+    Returns `(None, 0.0, ...)` when there is too little to read — thin input
     means no second opinion, not a guess.
     """
-    if not outlook.strip() and not goal.strip():
-        return None, 0.0, "No free text given — rubric used alone."
+    block, chars = _format_free_text(free_text or {})
+    if chars < MIN_FREE_TEXT_CHARS:
+        return (
+            None,
+            0.0,
+            "Too little written to read — the rubric stands alone."
+            if chars
+            else "No free text given — rubric used alone.",
+        )
 
     raw = generate(
         PROFILE_PROMPT.format(
             rubric_score=rubric_score, rubric_band=rubric_band, mcq=mcq,
-            outlook=outlook.strip()[:600] or "(not answered)",
-            goal=goal.strip()[:600] or "(not answered)",
+            free_text=block,
         ),
         schema=_ProfileOut,
         system=PROFILER_SYSTEM,
@@ -308,22 +348,24 @@ REPORT_SYSTEM = (
 
 REPORT_PROMPT = """Horizon band: {band}
 Rubric score: {rubric_score}/11
-Their words on the market: "{outlook}"
-Their words on success: "{goal}"
 
-Under 180 words: what this style means, one strength, one blind spot to watch,
-one practical habit. End with one line stating this is not investment advice.
+Their own words —
+{free_text}
+
+Under 180 words: what this style means, one strength you can point to in their
+own words, one blind spot their answers suggest, and one practical habit. Quote
+them at least once. End with one line stating this is not investment advice.
 """
 
 
 def personality_report(
-    *, band: str, rubric_score: int, outlook: str = "", goal: str = ""
+    *, band: str, rubric_score: int, free_text: dict[str, str] | None = None
 ) -> str:
+    block, _ = _format_free_text(free_text or {})
     raw = generate(
         REPORT_PROMPT.format(
             band=band, rubric_score=rubric_score,
-            outlook=outlook.strip()[:600] or "(not answered)",
-            goal=goal.strip()[:600] or "(not answered)",
+            free_text=block or "(they skipped the written questions)",
         ),
         system=REPORT_SYSTEM,
         temperature=0.4,
