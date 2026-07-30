@@ -100,6 +100,12 @@ class PortfolioState(BaseModel):
     mode: str
     halted: bool
     halt_reason: str | None = None
+
+    # Set once an account exists. None means the engine is running on the
+    # env-default capital with the baseline desks.yaml split.
+    risk_band: str | None = None
+    allocation: dict | None = None
+
     capital: float
     deployed: float
     cash: float

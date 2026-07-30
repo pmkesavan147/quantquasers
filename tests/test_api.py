@@ -137,5 +137,97 @@ def test_openapi_documents_the_frozen_routes(client):
         "/api/orders/propose", "/api/orders/execute", "/api/desks",
         "/api/portfolio", "/api/journal", "/api/health",
         "/api/control/pause", "/api/control/resume",
+        "/api/account", "/api/account/preview",
     ):
         assert route in paths, f"{route} missing from the frozen contract"
+
+
+# ── onboarding ───────────────────────────────────────────────────────────
+CONSERVATIVE = {
+    "capital": 200_000,
+    "horizons": ["long_term"],
+    "day_trading": False,
+    "allowed_caps": ["large"],
+    "max_drawdown_pct": 10,
+    "experience": "new",
+}
+
+
+def test_account_is_unconfigured_until_created(client):
+    body = client.get("/api/account").json()
+    assert body["configured"] is False
+    assert body["default_capital"] > 0
+
+
+def test_creating_an_account_derives_the_split_from_the_declared_capital(client):
+    body = client.post("/api/account", json={"capital": 300_000}).json()
+    assert body["capital"] == 300_000
+    assert round(sum(body["allocation_pct"].values()), 2) == 100
+    assert round(sum(body["allocation_rupees"].values()), 2) == 300_000
+    assert len(body["desks"]) == 3
+
+
+def test_capital_flows_into_the_engine_limits_and_health(client):
+    client.post("/api/account", json={"capital": 250_000})
+    health = client.get("/api/health").json()
+    assert health["account_configured"] is True
+    assert health["capital"] == 250_000
+    assert health["risk_band"] in {"conservative", "balanced", "aggressive"}
+    assert client.get("/api/portfolio").json()["capital"] == 250_000
+
+
+def test_opting_out_of_intraday_switches_the_day_desk_off_but_keeps_it_visible(client):
+    body = client.post("/api/account", json=CONSERVATIVE).json()
+    assert body["risk_band"] == "conservative"
+    assert "day" in body["desks_off"]
+    assert "day" not in body["allocation_pct"]
+
+    day = next(d for d in client.get("/api/desks").json() if d["name"] == "day")
+    assert day["enabled"] is False
+    assert day["allocation_pct"] == 0
+
+
+def test_a_conservative_account_cannot_trade_the_day_desk(client):
+    client.post("/api/account", json=CONSERVATIVE)
+    body = client.post(
+        "/api/orders/execute",
+        json={"desk": "day", "at": "2026-07-30T10:30:00"},
+    ).json()
+    assert body["fills"] == []
+
+
+def test_get_account_echoes_the_profile_after_creation(client):
+    client.post("/api/account", json={"capital": 400_000, "sip_amount": 10_000,
+                                     "sip_frequency": "monthly"})
+    body = client.get("/api/account").json()
+    assert body["configured"] is True
+    assert body["profile"]["capital"] == 400_000
+    assert body["sip"] == {
+        "amount": 10_000, "frequency": "monthly",
+        "target_desk": "long_term", "note": body["sip"]["note"],
+    }
+
+
+def test_a_sip_amount_without_a_frequency_is_rejected(client):
+    r = client.post("/api/account", json={"capital": 100_000,
+                                          "sip_amount": 5_000})
+    assert r.status_code == 422
+
+
+def test_non_positive_capital_is_rejected(client):
+    assert client.post("/api/account", json={"capital": 0}).status_code == 422
+
+
+def test_preview_changes_nothing(client):
+    r = client.post("/api/account/preview", json={"capital": 900_000})
+    assert r.status_code == 200
+    assert r.json()["capital"] == 900_000
+    # Still unconfigured — preview is for the onboarding slider only.
+    assert client.get("/api/account").json()["configured"] is False
+
+
+def test_account_creation_is_journaled(client):
+    client.post("/api/account", json={"capital": 123_456})
+    notes = client.get("/api/journal?kind=note&limit=100").json()
+    created = [n for n in notes if n["payload"]["event"] == "account_created"]
+    assert created and created[0]["payload"]["capital"] == 123_456

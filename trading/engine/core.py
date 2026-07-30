@@ -16,13 +16,15 @@ CLI:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 
-from core.contracts import Candidate, SymbolSentiment
+from core.contracts import Candidate, RiskProfile, SymbolSentiment
+from trading.allocation import apply_to_desks, explain, risk_band
 from trading.config import DeskConfig, RiskLimits, load_desks
 from trading.desks import Skip, open_positions, propose_entries, propose_exits
 from trading.execution.broker import InsufficientFunds, NotFilled
@@ -61,11 +63,25 @@ class Engine:
         journal: Journal | None = None,
         limits: RiskLimits | None = None,
         desks: dict[str, DeskConfig] | None = None,
+        profile: RiskProfile | None = None,
     ):
         self.quotes = quotes
         self.journal = journal or Journal()
         self.limits = limits or RiskLimits.load()
+        self.profile = profile
         self.desks = desks or load_desks()
+
+        # A profile rewrites the split across desks and switches off the ones
+        # the user opted out of. Capital comes from the profile too — the
+        # user's declared number outranks the env default.
+        if profile is not None:
+            self.desks = apply_to_desks(self.desks, profile)
+            self.limits = dataclasses.replace(
+                self.limits,
+                max_capital=profile.capital,
+                allow_intraday=self.limits.allow_intraday and profile.day_trading,
+            )
+
         self.risk = RiskManager(self.limits, self.journal)
         self.mode, self.gate_reasons = resolve_mode()
 
@@ -128,14 +144,25 @@ class Engine:
         candidates: list[Candidate],
         sentiments: dict[str, SymbolSentiment] | None = None,
         now: datetime | None = None,
-        day_trading_allowed: bool = True,
+        day_trading_allowed: bool | None = None,
     ) -> DeskRun:
         desk = self.desks[name]
         now = now or datetime.now()
         run = DeskRun(desk=name)
 
+        # The profile is the default answer; an explicit argument overrides it.
+        if day_trading_allowed is None:
+            day_trading_allowed = (
+                self.profile.day_trading if self.profile is not None else True
+            )
+
         if not desk.enabled:
-            self.journal.append("note", {"desk": name, "event": "disabled"})
+            self.journal.append(
+                "note",
+                {"desk": name, "event": "disabled",
+                 "reason": "not in the user's mandate"
+                           if self.profile is not None else "disabled in desks.yaml"},
+            )
             return run
 
         broker = self.brokers[name]
@@ -191,7 +218,7 @@ class Engine:
         self,
         candidates_by_horizon: dict[str, list[Candidate]],
         now: datetime | None = None,
-        day_trading_allowed: bool = True,
+        day_trading_allowed: bool | None = None,
     ) -> list[DeskRun]:
         return [
             self.run_desk(
@@ -227,6 +254,8 @@ class Engine:
             positions.extend(open_positions(cfg, self.brokers[name]))
         desks = [self.desk_state(n) for n in self.desks]
         return PortfolioState(
+            risk_band=risk_band(self.profile) if self.profile else None,
+            allocation=explain(self.profile) if self.profile else None,
             mode=self.mode,
             halted=self.risk.halted,
             halt_reason=self.risk.halt_reason,

@@ -66,15 +66,25 @@ class SymbolSentiment(BaseModel):
 
 # ── user ─────────────────────────────────────────────────────────────────
 class RiskProfile(BaseModel):
-    capital: float
+    capital: float = Field(gt=0, description="₹ the user is putting in")
     horizons: list[Horizon]
     allowed_caps: list[CapBucket]
     max_drawdown_pct: float
     experience: Literal["new", "1-3y", "3y+"]
     day_trading: bool
     uses_leverage: bool
+
+    # Gemma's read of the survey free text. Advisory: the deterministic rubric
+    # in trading/allocation.py is authoritative and this may move the risk
+    # band by at most one notch. See allocation.risk_band().
     trader_type: Horizon | None = None
     confidence: float = 0.0
+
+    # Recurring inflow. 0 disables it. A SIP deploys on schedule regardless of
+    # sentiment — sentiment chooses WHICH stocks, never WHETHER to invest,
+    # because pausing a SIP is what destroys rupee-cost averaging.
+    sip_amount: float = 0.0
+    sip_frequency: Literal["none", "weekly", "monthly"] = "none"
 
 
 # ── quant (deterministic) ────────────────────────────────────────────────

@@ -21,7 +21,7 @@ comes from deterministic Python. `trading/` provably never imports `gemma/`.
 | Track | Doc | Owns | Status |
 |---|---|---|---|
 | 1 · Sentiment & Selection | [TRACK-1-SENTIMENT.md](TRACK-1-SENTIMENT.md) | Gemma scoring, quant metrics, mandate guard, ranker | spec |
-| 2 · Trade Automation | [TRACK-2-TRADING.md](TRACK-2-TRADING.md) | Desks, risk manager, paper + Kite execution, journal | **built · 106 tests** |
+| 2 · Trade Automation | [TRACK-2-TRADING.md](TRACK-2-TRADING.md) | Desks, risk manager, capital allocation, paper + Kite execution, journal | **built · 151 tests** |
 | 3 · Frontend & UX | [TRACK-3-FRONTEND.md](TRACK-3-FRONTEND.md) | Next.js app, onboarding, dashboard, audit trail | spec |
 
 Each doc repeats the shared contract in §0 so any dev can work standalone.
@@ -30,7 +30,7 @@ Each doc repeats the shared contract in §0 so any dev can work standalone.
 
 ```bash
 pip install -r requirements.txt
-pytest -q                                              # 106 passed
+pytest -q                                              # 151 passed
 python -m trading.engine.core --all --at 10:30         # all three desks trade
 python -m trading.engine.core --desk day  --at 15:20   # intraday square-off
 uvicorn api.main:app --reload                          # API + /docs on :8000
@@ -40,6 +40,26 @@ uvicorn api.main:app --reload                          # API + /docs on :8000
 unblocked now.** Track 3 can build every screen against
 `POST /api/orders/execute` today — it returns real fills, real vetoes, and the
 sentiment refusals with their triggering numbers.
+
+### Onboarding: capital in, desk split out
+
+Desk allocations are **not** static config. The user declares their capital and
+their appetite; a hand-written rubric in `trading/allocation.py` derives the
+risk band, and the day / swing / long-term split follows from it. Gemma's read
+of the survey free text may move the band **one notch at most**, and only above
+a 0.70 confidence floor — a model never sets an equity allocation.
+
+```bash
+POST /api/account          # create: capital + horizons + appetite → split, engine rebuilt
+POST /api/account/preview  # same maths, changes nothing — for the onboarding slider
+GET  /api/account          # current profile + allocation, or defaults if unset
+```
+
+Opting out of intraday removes the day desk and the rest renormalise to absorb
+its share — the desk stays visible at 0% and `enabled: false` so the UI can say
+*"day desk — off, you opted out"* instead of silently dropping it. A SIP
+(`sip_amount` + `sip_frequency`) deploys on schedule regardless of sentiment:
+sentiment picks *which* stocks, never *whether* to invest.
 
 Track 1: `QuantMetrics.move_1d_pct` / `move_5d_pct` / `move_20d_pct` are
 optional fields the lag guard reads. Populate them when convenient; the guard

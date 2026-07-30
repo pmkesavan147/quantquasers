@@ -47,7 +47,7 @@ def _parse_time(raw: str | None) -> time | None:
 # ── risk limits ──────────────────────────────────────────────────────────
 @dataclass(frozen=True)
 class RiskLimits:
-    max_capital: float = field(default_factory=lambda: _f("MAX_CAPITAL", 100_000))
+    max_capital: float = field(default_factory=lambda: _f("MAX_CAPITAL", 500_000))
     max_position_pct: float = field(default_factory=lambda: _f("MAX_POSITION_PCT", 10))
     daily_loss_limit_pct: float = field(
         default_factory=lambda: _f("DAILY_LOSS_LIMIT_PCT", 2)
@@ -142,7 +142,9 @@ def load_desks(path: Path | None = None) -> dict[str, DeskConfig]:
             rebalance_every_days=d.get("rebalance_every_days"),
         )
 
-    total = sum(x.allocation_pct for x in out.values())
+    # Only enabled desks must sum to 100. After a profile is applied, desks the
+    # user opted out of sit at 0% and disabled — see trading/allocation.py.
+    total = sum(x.allocation_pct for x in out.values() if x.enabled)
     if abs(total - 100) > 0.01:
-        raise ValueError(f"desk allocations must sum to 100, got {total}")
+        raise ValueError(f"enabled desk allocations must sum to 100, got {total}")
     return out
