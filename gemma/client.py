@@ -55,9 +55,13 @@ REMOTE_URL = os.getenv("GEMMA_REMOTE_URL", "").rstrip("/")
 REMOTE_TIMEOUT = float(os.getenv("GEMMA_REMOTE_TIMEOUT_S", "120"))
 CACHE_NAMESPACE = os.getenv("GEMMA_CACHE_NAMESPACE", "shared")
 
-# Gemma 4 on AI Studio is free-tier but rate-limited, and a 4B local model is
-# slow. Both make short outputs the right default.
-MAX_TOKENS = int(os.getenv("GEMMA_MAX_TOKENS", "400"))
+# Gemma 4 thinks before it answers, and those thinking tokens come out of
+# max_output_tokens. At 400 the model spends the entire budget reasoning and
+# returns an empty response with finish_reason=MAX_TOKENS — which looks exactly
+# like a broken API key from the outside. Measured: ~400-550 thinking tokens for
+# a one-headline classification, so the budget has to clear that with room for
+# the answer. `thinking_config` cannot fix this; the API rejects it for Gemma.
+MAX_TOKENS = int(os.getenv("GEMMA_MAX_TOKENS", "1600"))
 
 _lock = threading.Lock()
 _resolved: Backend | None = None

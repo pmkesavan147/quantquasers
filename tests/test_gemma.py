@@ -8,6 +8,7 @@ dead one.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 
 import pytest
@@ -124,6 +125,77 @@ def test_scores_stay_inside_the_contract_bounds():
     )
     assert -1.0 <= s.sentiment <= 1.0
     assert 1 <= s.materiality <= 5
+
+
+def test_the_token_budget_clears_gemma_4s_thinking_tokens():
+    """Gemma 4 thinks before it answers and those tokens come out of
+    max_output_tokens. At 400 the live model spent the whole budget reasoning
+    and returned an empty string with finish_reason=MAX_TOKENS — which is
+    indistinguishable from a bad API key unless you check usage metadata."""
+    assert client.MAX_TOKENS >= 1000
+
+
+def test_an_out_of_range_materiality_is_clamped_not_rejected(monkeypatch):
+    """The live model returns 6 on a 1-5 scale. Rejecting the whole reading for
+    that would swap a real classification for the keyword fallback."""
+    monkeypatch.setattr(
+        scorers, "generate",
+        lambda *a, **k: '{"sentiment": -0.6, "event_type": "regulatory", '
+                        '"materiality": 6, "rationale": "r"}',
+    )
+    monkeypatch.setattr(scorers, "last_model", lambda: "gemma-4-26b-a4b-it")
+    s = scorers.score_headline("X", "X", symbol="T", id="h")
+    assert s.materiality == 5
+    assert s.model == "gemma-4-26b-a4b-it"
+
+
+def test_a_sentiment_beyond_the_scale_is_clamped(monkeypatch):
+    monkeypatch.setattr(
+        scorers, "generate",
+        lambda *a, **k: '{"sentiment": -1.8, "event_type": "litigation", '
+                        '"materiality": 3, "rationale": "r"}',
+    )
+    monkeypatch.setattr(scorers, "last_model", lambda: "gemma-4-26b-a4b-it")
+    assert scorers.score_headline("X", "X", symbol="T", id="h").sentiment == -1.0
+
+
+@pytest.mark.parametrize(
+    "returned,expected",
+    [
+        ("Regulatory", "regulatory"),
+        ("ORDER_WIN", "order_win"),
+        ("order win", "order_win"),
+        ("management-change", "management_change"),
+        ("  earnings  ", "earnings"),
+        ("something else entirely", "other"),
+    ],
+)
+def test_event_type_case_and_spacing_are_normalised(returned, expected, monkeypatch):
+    """The model does not reliably echo the exact enum, and a case mismatch is
+    not a reason to discard its reading."""
+    monkeypatch.setattr(
+        scorers, "generate",
+        lambda *a, **k: json.dumps(
+            {"sentiment": 0.2, "event_type": returned, "materiality": 2,
+             "rationale": "r"}
+        ),
+    )
+    monkeypatch.setattr(scorers, "last_model", lambda: "gemma-4-26b-a4b-it")
+    assert scorers.score_headline("X", "X", symbol="T", id="h").event_type == expected
+
+
+def test_a_confidence_above_one_is_clamped(monkeypatch):
+    monkeypatch.setattr(
+        scorers, "generate",
+        lambda *a, **k: '{"trader_type": "swing", "confidence": 1.4, '
+                        '"reasoning": "r"}',
+    )
+    horizon, confidence, _ = scorers.profile_user(
+        rubric_score=5, rubric_band="balanced", mcq={},
+        free_text={"q": "I hold for weeks and act on results, not on screens"},
+    )
+    assert horizon == Horizon.SWING
+    assert confidence == 1.0
 
 
 def test_the_published_timestamp_is_preserved():

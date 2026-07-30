@@ -30,11 +30,18 @@ EVENT_TYPES: tuple[str, ...] = (
 
 
 class _HeadlineOut(BaseModel):
-    """The four fields Gemma returns. Everything else is computed here."""
+    """The four fields Gemma returns. Everything else is computed here.
 
-    sentiment: float = Field(ge=-1, le=1)
+    Deliberately unconstrained: the live model returns `materiality: 6` on a
+    1–5 scale and capitalises `event_type`, and a validation error here would
+    throw away a perfectly good reading in favour of the keyword fallback.
+    Out-of-range values are clamped in `score_headline`, where the clamp is
+    visible, rather than rejected.
+    """
+
+    sentiment: float
     event_type: str
-    materiality: int = Field(ge=1, le=5)
+    materiality: int
     rationale: str
 
 
@@ -132,8 +139,11 @@ def score_headline(
     model = last_model()
     try:
         out = _HeadlineOut.model_validate(extract_json(raw))
-        if out.event_type not in EVENT_TYPES:
-            out.event_type = "other"
+        # "Regulatory", "order win", "ORDER_WIN" — the model does not reliably
+        # echo the exact enum, and a case mismatch is not a reason to discard
+        # its reading.
+        normalised = out.event_type.strip().lower().replace(" ", "_").replace("-", "_")
+        out.event_type = normalised if normalised in EVENT_TYPES else "other"
     except Exception:
         out, model = _fallback_headline(title), "fallback"
 
@@ -164,8 +174,11 @@ PROFILER_SYSTEM = (
 
 
 class _ProfileOut(BaseModel):
+    """Unconstrained for the same reason as _HeadlineOut: a model returning
+    confidence 1.2 should be clamped to 1.0, not thrown away."""
+
     trader_type: str
-    confidence: float = Field(ge=0, le=1)
+    confidence: float
     reasoning: str
 
 

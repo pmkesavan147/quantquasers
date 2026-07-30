@@ -11,6 +11,7 @@ nothing reaches out. Prices land in `data/cache/prices/*.parquet`, headlines in
 from __future__ import annotations
 
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -26,7 +27,8 @@ from selection.universe import company_name, universe
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def main(with_gemma: bool = False, limit: int | None = None) -> None:
+def main(with_gemma: bool = False, limit: int | None = None,
+         workers: int = 6) -> None:
     symbols = sorted(universe())
     if limit:
         symbols = symbols[:limit]
@@ -60,22 +62,39 @@ def main(with_gemma: bool = False, limit: int | None = None) -> None:
             print("  no model reachable — nothing to cache, scoring stays "
                   "deterministic keyword fallback")
             return
+
+        # Gemma 4 takes ~15s per headline because it reasons before answering,
+        # so 40 symbols × 8 headlines is over an hour sequentially. The calls are
+        # pure I/O, so a small pool cuts it to minutes. Kept small on purpose:
+        # the free tier rate-limits, and a 429 storm is slower than patience.
         now = datetime.now()
-        for i, symbol in enumerate(symbols, 1):
-            sentiment, items = score_symbol(symbol, now=now)
-            print(
-                f"[{i:>3}/{len(symbols)}] {symbol:12} "
-                f"score={sentiment.score:+.2f} conf={sentiment.confidence:.2f} "
-                f"n={sentiment.n_articles}",
-                flush=True,
-            )
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(score_symbol, symbol, now=now): symbol
+                for symbol in symbols
+            }
+            for future in as_completed(futures):
+                symbol = futures[future]
+                done += 1
+                try:
+                    sentiment, _ = future.result()
+                    print(
+                        f"[{done:>3}/{len(symbols)}] {symbol:12} "
+                        f"score={sentiment.score:+.2f} "
+                        f"conf={sentiment.confidence:.2f} "
+                        f"n={sentiment.n_articles}",
+                        flush=True,
+                    )
+                except Exception as exc:
+                    print(f"[{done:>3}/{len(symbols)}] {symbol:12} FAILED "
+                          f"{type(exc).__name__}: {exc}", flush=True)
+
         print(f"\ncached responses: {gemma_client.status()['cached_responses']}")
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    limit = None
-    for a in args:
-        if a.startswith("--limit="):
-            limit = int(a.split("=", 1)[1])
-    main(with_gemma="--with-gemma" in args, limit=limit)
+    limit = next((int(a.split("=", 1)[1]) for a in args if a.startswith("--limit=")), None)
+    workers = next((int(a.split("=", 1)[1]) for a in args if a.startswith("--workers=")), 6)
+    main(with_gemma="--with-gemma" in args, limit=limit, workers=workers)
